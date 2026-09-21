@@ -1,0 +1,34 @@
+# Node / frontend
+node_modules/
+dist/
+build/
+.next/
+*.log
+
+# Python / backend
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+db.sqlite3
+media/
+staticfiles/
+backups/
+
+# Maxfiy fayllar
+.env
+.env.local
+.env.production
+*.pem
+*.key
+secrets/
+
+# Ichki hujjatlar va agent sozlamalari (faqat lokal)
+docs/
+CLAUDE.local.md
+.claude/
+
+# IDE
+.vscode/
+.idea/

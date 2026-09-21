@@ -1,0 +1,75 @@
+# Duradgor Mebel — to'liq stek: PostgreSQL + Django/DRF + React frontend + Nginx
+# Barcha sozlamalar, jumladan DB (DB_NAME/DB_USER/DB_PASSWORD), backend/.env dan olinadi.
+services:
+  db:
+    image: postgres:16-alpine
+    env_file: ./backend/.env
+    # postgres image POSTGRES_* nomlarini kutadi — backend/.env dagi DB_* qiymatlaridan olinadi
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        : "$${DB_NAME:?backend/.env da DB_NAME berilishi shart}"
+        "$${DB_USER:?backend/.env da DB_USER berilishi shart}"
+        "$${DB_PASSWORD:?backend/.env da DB_PASSWORD berilishi shart}"
+        && export POSTGRES_DB="$$DB_NAME" POSTGRES_USER="$$DB_USER" POSTGRES_PASSWORD="$$DB_PASSWORD"
+        && exec docker-entrypoint.sh postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$DB_USER\" -d \"$$DB_NAME\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      # .env lokal ishga moslangan bo'lishi mumkin (SQLite, 127.0.0.1) — docker'da doim shu:
+      DB_ENGINE: django.db.backends.postgresql
+      DB_HOST: db
+      DB_PORT: 5432
+      NUM_PROXIES: 1 # nginx ortida — mijoz IP'si X-Forwarded-For'dan (throttle uchun)
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api # frontend {API}/catalog/... → nginx /api/ → backend:8000
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_volume:/vol/static
+      - media_volume:/vol/media
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    restart: unless-stopped
+    # --- Traefik ishlatilsa (nginx portlarini o'chirib, quyidagini yoqing) ---
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.duradgor.rule=Host(`example.com`)"
+    #   - "traefik.http.routers.duradgor.entrypoints=websecure"
+    #   - "traefik.http.routers.duradgor.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.duradgor.loadbalancer.server.port=80"
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
