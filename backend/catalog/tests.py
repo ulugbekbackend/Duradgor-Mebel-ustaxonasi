@@ -129,3 +129,28 @@ class SeedDemoTests(APITestCase):
         self.assertEqual(osaka.created_at.date().isoformat(), "2026-01-18")  # demo sanasi saqlanadi
         category = Category.objects.create(name="Yangi", slug="yangi")  # id to'qnashmasligi kerak
         self.assertGreater(category.pk, 12)
+
+
+class SitemapTests(APITestCase):
+    def test_sitemap_lists_current_categories_and_products(self):
+        category = Category.objects.create(name="Divanlar", slug="sofas")
+        product = Product.objects.create(
+            category=category, name="Osaka", slug="osaka-divani", description="d", price=Decimal("1"),
+            material="beech", width=1, depth=1, height=1,
+        )
+        response = self.client.get("/sitemap.xml")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.content.decode()
+        for path in ("/katalog</loc>", "/aloqa</loc>", "/katalog/sofas</loc>", "/mahsulot/osaka-divani</loc>"):
+            self.assertIn(path, body)
+        self.assertIn("http://testserver/", body)  # domen so'rovdan olinadi
+
+        # Admin'da qo'shilgan mahsulot darhol chiqadi, o'chirilgani yo'qoladi
+        Product.objects.create(
+            category=category, name="Yangi", slug="yangi-divan", description="d", price=Decimal("1"),
+            material="oak", width=1, depth=1, height=1,
+        )
+        product.delete()
+        body = self.client.get("/sitemap.xml").content.decode()
+        self.assertIn("/mahsulot/yangi-divan</loc>", body)
+        self.assertNotIn("/mahsulot/osaka-divani</loc>", body)

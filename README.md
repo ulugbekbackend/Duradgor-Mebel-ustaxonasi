@@ -95,6 +95,7 @@ demo-rejimda (lokaldagi katalog ma'lumotlari bilan) ishlaydi — backend'siz ham
 | POST | `/api/orders/` | Buyurtma yaratish (`full_name`, `phone`, `address`, `comment`, `payment_method`, `items: [{product, variant, quantity}]`) |
 | POST | `/api/contact/` | Aloqa formasi (`name`, `phone`, `message`) |
 | GET | `/api/health/` | Healthcheck |
+| GET | `/sitemap.xml` | Sitemap — bazadagi kategoriya va mahsulotlardan avtomatik |
 
 Buyurtma va murojaatlarni o'qish ochiq API'da yo'q — ular faqat admin panelda. To'liq sxema: `/api/docs/` (Swagger).
 Ruscha matnlar (`name_ru`, `description_ru`, `material_label_ru`) bo'sh bo'lsa sayt o'zbekchasini ko'rsatadi.
@@ -143,7 +144,7 @@ model o'zgarmaydi.
 ## 🌐 Production
 
 > Domen hali olinmagan — hamma joyda `example.com` andoza. Domen olingach uni quyidagilarda almashtiring:
-> `frontend/public/sitemap.xml`, `frontend/public/robots.txt`, `deploy/nginx.https.conf`,
+> `frontend/public/robots.txt` (Sitemap qatori), `deploy/nginx.https.conf`,
 > `backend/.env` (`ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`) va `docker-compose.yml` dagi Traefik izohi.
 
 - `backend/.env`: `DEBUG=False`, `ALLOWED_HOSTS=example.com`, `SECURE_SSL_REDIRECT=True`, maxfiy `SECRET_KEY` (bo'lmasa ilova ishga tushmaydi).
@@ -157,7 +158,10 @@ model o'zgarmaydi.
 ## 🗺 SEO
 
 Frontendda sahifa darajasidagi title/description/OG teglari (uz/ru), toza URL'lar
-(`BrowserRouter`, `#` siz), `public/robots.txt` va `public/sitemap.xml` tayyor — domenni o'zgartirib production'ga qo'ying.
+(`BrowserRouter`, `#` siz) va `public/robots.txt` tayyor. `sitemap.xml` ni backend bazadagi kategoriya va
+mahsulotlardan avtomatik yaratadi (`catalog/sitemaps.py`): admin'da qo'shilgan mahsulot darhol kiradi,
+o'chirilgani chiqib ketadi. Domen so'rovdan olinadi; nginx `/sitemap.xml` ni backend'ga yo'naltiradi
+(lokal ishlaganda: http://localhost:8000/sitemap.xml).
 
 ## ⚠️ Ma'lum cheklovlar
 
