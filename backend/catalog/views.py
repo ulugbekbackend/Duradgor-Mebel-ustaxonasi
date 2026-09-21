@@ -41,7 +41,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
     Filtrlar:
       ?category=sofas        — kategoriya (bolalari bilan birga)
-      ?q=divan               — nomi/tavsifi bo'yicha qidiruv (icontains/SearchFilter)
+      ?q=divan | диван       — nom/tavsif/material/kategoriya bo'yicha qidiruv, uz va ru (SearchFilter)
       ?material=oak,walnut   — material bo'yicha
       ?price_min=1000000&price_max=9000000
       ?status=in_stock | on_order
@@ -53,7 +53,11 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     lookup_field = "slug"
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ["name", "description", "category__name"]
+    # ?q= ikkala tilda: nom, tavsif, material izohi va kategoriya nomi (uz + ru)
+    search_fields = [
+        "name", "name_ru", "description", "description_ru",
+        "material_label", "material_label_ru", "category__name", "category__name_ru",
+    ]
     ordering_fields = ["price", "created_at", "popularity"]
     ordering = ["-created_at"]
 

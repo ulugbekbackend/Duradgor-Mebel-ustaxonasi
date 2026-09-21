@@ -38,6 +38,16 @@ class CatalogApiTests(APITestCase):
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["slug"], "osaka-divani")
 
+    def test_search_in_russian_and_material_label(self):
+        Product.objects.filter(pk=self.sofa.pk).update(
+            name_ru="Диван «Осака»", description_ru="Зелёный диван", material_label="Buk, zig'ir mato"
+        )
+        Category.objects.filter(pk=self.sofas.pk).update(name_ru="Диваны")
+        url = reverse("product-list")
+        for q in ("Осака", "Зелёный", "Диваны", "zig'ir"):
+            response = self.client.get(url, {"q": q})
+            self.assertEqual([r["slug"] for r in response.data["results"]], ["osaka-divani"], q)
+
     def test_category_filter_includes_children(self):
         # 'living' ota kategoriya — bolasi 'sofas' mahsuloti ham chiqishi kerak
         response = self.client.get(reverse("product-list"), {"category": "living"})
