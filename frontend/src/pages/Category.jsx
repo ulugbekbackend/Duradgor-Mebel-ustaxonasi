@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { CATEGORIES, MATERIALS, childrenOf, formatPrice, getCategory } from "../data/catalog";
+import { MATERIALS, formatPrice } from "../data/catalog";
 import { IMG } from "../data/images";
 import { fetchProducts } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 import { useSEO } from "../lib/seo";
+import { useCatalog } from "../store/catalog";
 import { ProductCard } from "../components/ProductCard";
-import { EmptyState, ProductSkeleton, Reveal } from "../components/ui";
+import { EmptyState, LoadError, ProductSkeleton, Reveal } from "../components/ui";
 import { IconArrow, IconChevron, IconClose, IconFilter, IconHammer, IconShield, IconTruck } from "../components/icons";
 
 const PAGE_SIZE = 6;
-// Ota bo'limlar tartibida: Mehmonxona → Oshxona → Yotoqxona → Ofis
-const SUBCATEGORIES = CATEGORIES.filter((c) => !c.parent).flatMap((p) => childrenOf(p.slug));
 
 export function CategoryPage() {
   const { slug } = useParams();
@@ -30,8 +29,11 @@ export function CategoryPage() {
   const [count, setCount] = useState(0);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
   const [mobileFilters, setMobileFilters] = useState(false);
 
+  const { subcategories, getCategory, error: catalogError, reload: reloadCatalog } = useCatalog();
   const category = getCategory(slug);
 
   // Aktiv chip lentaning ko'rinadigan qismida bo'lsin (faqat gorizontal — sahifa siljimaydi)
@@ -41,14 +43,14 @@ export function CategoryPage() {
     const chip = box?.querySelector('[aria-current="page"]');
     if (!box || !chip) return;
     box.scrollLeft = chip.offsetLeft - box.offsetLeft - (box.clientWidth - chip.offsetWidth) / 2;
-  }, [slug]);
+  }, [slug, subcategories]);
 
   useSEO({
     title: `${category ? L(category.name) : t("nav_catalog")} — Duradgor Mebel katalogi`,
     description: category
       ? `${L(category.name)}: qo'lda ishlangan mebel, narxlar va o'lchamlar. Duradgor ustaxonasi, Toshkent.`
       : "Duradgor ustaxonasi katalogi: divan, karavot, oshxona va ofis mebellari.",
-    image: category ? IMG[category.image] : IMG.workshop,
+    image: category ? category.imageUrl : IMG.workshop,
   });
 
   // slug o'zgarganda filtrlarni tozalash
@@ -86,6 +88,7 @@ export function CategoryPage() {
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    setLoadError(false);
     fetchProducts(query)
       .then((res) => {
         if (!alive) return;
@@ -93,12 +96,21 @@ export function CategoryPage() {
         setCount(res.count);
         setPages(res.pages);
       })
-      .catch(() => alive && setItems([]))
+      .catch(() => {
+        if (!alive) return;
+        setItems([]);
+        setLoadError(true); // server javob bermadi — bu "mahsulot yo'q" emas
+      })
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
-  }, [query]);
+  }, [query, retryNonce]);
+
+  const retry = () => {
+    setRetryNonce((n) => n + 1);
+    if (catalogError) reloadCatalog();
+  };
 
   const setPage = useCallback(
     (p) => {
@@ -238,7 +250,7 @@ export function CategoryPage() {
                   {b.icon} {b.label}
                 </span>
               ))}
-              {!loading && (
+              {!loading && !loadError && (
                 <span className="flex items-center gap-1.5 rounded-full bg-honey-400 px-3.5 py-1.5 text-[12px] font-extrabold text-pine-950">
                   {count} {t("results")}
                 </span>
@@ -248,7 +260,7 @@ export function CategoryPage() {
           <div className="hidden lg:block">
             <div className="overflow-hidden rounded-xl border-4 border-paper/15 shadow-lift">
               <img
-                src={category ? IMG[category.image] : IMG.workshop}
+                src={category ? category.imageUrl : IMG.workshop}
                 alt={category ? L(category.name) : "Duradgor"}
                 className="anim-kenburns aspect-[4/3] w-full object-cover"
               />
@@ -263,7 +275,7 @@ export function CategoryPage() {
           {/* Kategoriya chiplari */}
           <div ref={chipsRef} className="no-scrollbar flex max-w-full gap-2 overflow-x-auto pb-1">
             {/* Doim barcha bo'limlar ko'rinadi; tanlangani ajratiladi */}
-            {[{ slug: "", name: null }, ...SUBCATEGORIES].map((c) => {
+            {[{ slug: "", name: null }, ...subcategories].map((c) => {
               const active = c.slug === (slug ?? "");
               return (
                 <Link
@@ -342,6 +354,8 @@ export function CategoryPage() {
                   <ProductSkeleton key={i} />
                 ))}
               </div>
+            ) : loadError ? (
+              <LoadError onRetry={retry} />
             ) : items.length === 0 ? (
               <EmptyState title={t("empty_title")} text={t("empty_text")}>
                 <button
@@ -408,13 +422,13 @@ export function CategoryPage() {
               <h2 className="font-display text-2xl font-semibold sm:text-3xl">{t("cat_sections")}</h2>
             </Reveal>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {CATEGORIES.filter((c) => c.parent).map((c, i) => (
+              {subcategories.map((c, i) => (
                 <Reveal key={c.slug} delay={i * 50}>
                   <Link
                     to={`/katalog/${c.slug}`}
                     className="group flex items-center gap-3 rounded-xl border border-line bg-white/70 p-3.5 transition hover:-translate-y-1 hover:border-honey-400 hover:shadow-card"
                   >
-                    <img src={IMG[c.image]} alt="" className="size-14 shrink-0 rounded-lg object-cover transition duration-500 group-hover:scale-105" />
+                    <img src={c.imageUrl} alt="" className="size-14 shrink-0 rounded-lg object-cover transition duration-500 group-hover:scale-105" />
                     <span className="min-w-0">
                       <span className="font-display block truncate text-[15px] font-semibold">{L(c.name)}</span>
                       <span className="mt-0.5 inline-flex items-center gap-1 text-[12px] font-bold text-honey-600">

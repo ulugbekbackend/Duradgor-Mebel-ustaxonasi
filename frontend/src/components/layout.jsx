@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { CATEGORIES } from "../data/catalog";
 import { useI18n } from "../lib/i18n";
 import { useCart } from "../store/cart";
+import { useCatalog } from "../store/catalog";
 import {
   IconCart,
   IconClock,
@@ -23,8 +23,6 @@ export const TG_LINK = "https://t.me";
 // Footer: sayt dasturchisi
 export const DEV_NAME = "Ulug'bek";
 export const DEV_URL = "https://ulugbekdev.uz";
-
-const CATEGORIES_L = Object.fromEntries(CATEGORIES.map((c) => [c.slug, c.name]));
 
 /* ---------------- Yuqori lenta + Header ---------------- */
 export function Header() {
@@ -227,10 +225,7 @@ export function Header() {
 export function Footer() {
   const { t, L } = useI18n();
   const year = new Date().getFullYear();
-  const cats = [
-    { slug: "sofas" }, { slug: "armchairs" }, { slug: "beds" }, { slug: "wardrobes" },
-    { slug: "kitchen-sets" }, { slug: "dining" }, { slug: "desks" },
-  ];
+  const { subcategories: cats } = useCatalog();
   return (
     <footer className="noise relative overflow-hidden bg-pine-950 text-paper/85">
       <div className="woodlines absolute inset-0" />
@@ -269,7 +264,7 @@ export function Footer() {
             {cats.map((c) => (
               <li key={c.slug}>
                 <Link to={`/katalog/${c.slug}`} className="transition hover:text-honey-300">
-                  {L(Object.assign({ uz: "", ru: "" }, CATEGORIES_L[c.slug]))}
+                  {L(c.name)}
                 </Link>
               </li>
             ))}

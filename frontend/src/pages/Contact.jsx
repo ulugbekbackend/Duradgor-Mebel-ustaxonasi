@@ -2,6 +2,8 @@ import { useState } from "react";
 import { IMG } from "../data/images";
 import { useI18n } from "../lib/i18n";
 import { useSEO } from "../lib/seo";
+import { sendContactMessage } from "../lib/api";
+import { firstError, isValidPhone } from "../lib/validators";
 import { PHONE, PHONE_HREF, TG_LINK } from "../components/layout";
 import { Reveal, useToast } from "../components/ui";
 import { IconArrow, IconCheck, IconChevron, IconClock, IconFacebook, IconPhone, IconPin, IconTelegram } from "../components/icons";
@@ -15,6 +17,8 @@ export function ContactPage() {
   const [phone, setPhone] = useState("");
   const [msg, setMsg] = useState("");
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [errors, setErrors] = useState({});
   const [faqOpen, setFaqOpen] = useState(0);
 
   useSEO({
@@ -23,16 +27,43 @@ export function ContactPage() {
     image: IMG.workshop,
   });
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !phone.trim()) return;
-    setSent(true);
-    toast(t("ct_sent"));
-    setName("");
-    setPhone("");
-    setMsg("");
-    setTimeout(() => setSent(false), 2500);
+    const errs = {};
+    if (name.trim().length < 2) errs.name = t("err_required");
+    if (!isValidPhone(phone)) errs.phone = t("err_phone");
+    setErrors(errs);
+    if (Object.keys(errs).length) return;
+
+    setSending(true);
+    try {
+      await sendContactMessage({ name: name.trim(), phone: phone.trim(), message: msg.trim() });
+      setSent(true);
+      toast(t("ct_sent"));
+      setName("");
+      setPhone("");
+      setMsg("");
+      setTimeout(() => setSent(false), 2500);
+    } catch (err) {
+      if (err.status === 429) {
+        setErrors({ form: t("err_throttle") });
+        return;
+      }
+      const f = err.fields ?? {};
+      setErrors({
+        name: firstError(f.name),
+        phone: firstError(f.phone),
+        form: firstError(f.message) || firstError(f.detail) || (f.name || f.phone ? undefined : t("ct_err")),
+      });
+    } finally {
+      setSending(false);
+    }
   };
+
+  const inputCls = (err) =>
+    `w-full rounded-xl border bg-white/80 px-4 py-3 outline-none transition focus:ring-2 ${
+      err ? "border-rust focus:border-rust focus:ring-rust/30" : "border-line focus:border-honey-500 focus:ring-honey-400/40"
+    }`;
 
   const cards = [
     { icon: <IconPhone width={20} height={20} />, label: t("ct_phone"), value: PHONE, href: PHONE_HREF },
@@ -164,7 +195,7 @@ export function ContactPage() {
           {/* Forma + FAQ */}
           <div className="min-w-0 lg:col-span-3">
             <Reveal delay={120}>
-              <form onSubmit={submit} className="rounded-xl border border-line bg-white/70 p-6 shadow-card sm:p-8">
+              <form onSubmit={submit} noValidate className="rounded-xl border border-line bg-white/70 p-6 shadow-card sm:p-8">
                 <h2 className="font-display text-2xl font-semibold">{t("ct_form_t")}</h2>
                 <div className="mt-6 grid gap-5 sm:grid-cols-2">
                   <div>
@@ -174,8 +205,9 @@ export function ContactPage() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required
-                      className="w-full rounded-xl border border-line bg-white/80 px-4 py-3 outline-none transition focus:border-honey-500 focus:ring-2 focus:ring-honey-400/40"
+                      className={inputCls(errors.name)}
                     />
+                    {errors.name && <p className="mt-1.5 text-[12.5px] font-semibold text-rust">{errors.name}</p>}
                   </div>
                   <div>
                     <label htmlFor="ct-phone" className="mb-1.5 block text-sm font-bold">{t("ct_phone")} *</label>
@@ -186,8 +218,9 @@ export function ContactPage() {
                       onChange={(e) => setPhone(e.target.value)}
                       required
                       placeholder="+998 …"
-                      className="w-full rounded-xl border border-line bg-white/80 px-4 py-3 outline-none transition focus:border-honey-500 focus:ring-2 focus:ring-honey-400/40"
+                      className={inputCls(errors.phone)}
                     />
+                    {errors.phone && <p className="mt-1.5 text-[12.5px] font-semibold text-rust">{errors.phone}</p>}
                   </div>
                 </div>
                 <div className="mt-5">
@@ -197,15 +230,28 @@ export function ContactPage() {
                     rows={6}
                     value={msg}
                     onChange={(e) => setMsg(e.target.value)}
-                    className="w-full rounded-xl border border-line bg-white/80 px-4 py-3 outline-none transition focus:border-honey-500 focus:ring-2 focus:ring-honey-400/40"
+                    maxLength={2000}
+                    className={inputCls()}
                   />
                 </div>
+                {errors.form && (
+                  <p role="alert" className="mt-4 rounded-lg bg-rust/10 px-3.5 py-2.5 text-[13px] font-semibold text-rust">
+                    {errors.form}
+                  </p>
+                )}
                 <div className="mt-6 flex flex-wrap items-center gap-4">
                   <button
                     type="submit"
-                    className="group inline-flex items-center gap-2.5 rounded-full bg-pine-900 px-8 py-3.5 font-bold text-paper shadow-card transition hover:bg-pine-800 active:scale-95"
+                    disabled={sending}
+                    className="group inline-flex items-center gap-2.5 rounded-full bg-pine-900 px-8 py-3.5 font-bold text-paper shadow-card transition hover:bg-pine-800 active:scale-95 disabled:cursor-wait disabled:opacity-70"
                   >
-                    {sent ? <IconCheck width={18} height={18} strokeWidth={2.4} className="text-honey-300" /> : <IconArrow width={18} height={18} />}
+                    {sending ? (
+                      <span className="size-[18px] animate-spin rounded-full border-[3px] border-paper/30 border-t-paper" />
+                    ) : sent ? (
+                      <IconCheck width={18} height={18} strokeWidth={2.4} className="text-honey-300" />
+                    ) : (
+                      <IconArrow width={18} height={18} />
+                    )}
                     {sent ? t("ct_sent") : t("ct_send")}
                   </button>
                   <div className="flex gap-2">

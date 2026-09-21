@@ -1,11 +1,14 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { IMG } from "../data/images";
-import { CATEGORIES, PRODUCTS, formatPrice, productsOf } from "../data/catalog";
+import { formatPrice } from "../data/catalog";
+import { fetchProducts } from "../lib/api";
+import { useAsync } from "../lib/useAsync";
 import { useI18n } from "../lib/i18n";
 import { useSEO } from "../lib/seo";
+import { useCatalog } from "../store/catalog";
 import { ProductCard } from "../components/ProductCard";
-import { Reveal, Stars } from "../components/ui";
+import { LoadError, ProductSkeleton, Reveal, Stars } from "../components/ui";
 import { PHONE, PHONE_HREF, TG_LINK } from "../components/layout";
 import {
   IconArrow, IconHammer, IconPhone, IconPot, IconRuler, IconSpark, IconSofa, IconBed, IconDesk, IconTelegram, IconTruck,
@@ -50,13 +53,18 @@ export function HomePage() {
     image: IMG.workshop,
   });
 
-  const leaves = useMemo(() => CATEGORIES.filter((c) => c.parent), []);
+  const { subcategories: leaves, error: catalogError, reload: reloadCatalog } = useCatalog();
 
-  const shown = useMemo(() => {
-    if (tab === "new") return PRODUCTS.filter((p) => p.is_new);
-    if (tab === "feat") return PRODUCTS.filter((p) => p.is_featured);
-    return [...PRODUCTS].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)).slice(0, 8);
-  }, [tab]);
+  // Vitrina: tab bo'yicha backenddan (8 tagacha)
+  const showcase = useAsync(
+    () => fetchProducts({ sort: "new", pageSize: 8, isNew: tab === "new", featured: tab === "feat" }),
+    [tab]
+  );
+  const shown = showcase.data?.results ?? [];
+
+  // Hero kartochkasi: eng yangi tavsiya etilgan mahsulot
+  const hero = useAsync(() => fetchProducts({ featured: true, sort: "new", pageSize: 1 }), []);
+  const heroProduct = hero.data?.results[0];
 
   const marquee = [t("m1"), t("m2"), t("m3"), t("m4"), t("m5"), t("m6")];
   const steps = [
@@ -65,8 +73,6 @@ export function HomePage() {
     { icon: <IconHammer width={22} height={22} />, n: "03", title: "step3", text: "step3t" },
     { icon: <IconTruck width={22} height={22} />, n: "04", title: "step4", text: "step4t" },
   ];
-
-  const heroProduct = PRODUCTS[0];
 
   return (
     <>
@@ -127,16 +133,18 @@ export function HomePage() {
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-pine-950/50 via-transparent to-transparent" />
             </div>
             {/* Suzuvchi mahsulot kartochkasi */}
-            <Link
-              to={`/mahsulot/${heroProduct.slug}`}
-              className="anim-float absolute -bottom-5 left-2 flex items-center gap-3 rounded-xl border border-line bg-paper p-3 pr-5 text-ink shadow-lift transition hover:scale-[1.03] sm:left-6"
-            >
-              <img src={IMG[heroProduct.image]} alt="" className="size-14 rounded-lg object-cover" />
-              <span>
-                <span className="block text-[11px] font-bold uppercase tracking-wider text-honey-600">{t("hero_price_from")} {formatPrice(heroProduct.price)}</span>
-                <span className="font-display block text-[15px] font-semibold leading-tight">{L(heroProduct.name)}</span>
-              </span>
-            </Link>
+            {heroProduct && (
+              <Link
+                to={`/mahsulot/${heroProduct.slug}`}
+                className="anim-float absolute -bottom-5 left-2 flex items-center gap-3 rounded-xl border border-line bg-paper p-3 pr-5 text-ink shadow-lift transition hover:scale-[1.03] sm:left-6"
+              >
+                <img src={heroProduct.imageUrl} alt="" className="size-14 rounded-lg object-cover" />
+                <span>
+                  <span className="block text-[11px] font-bold uppercase tracking-wider text-honey-600">{t("hero_price_from")} {formatPrice(heroProduct.price)}</span>
+                  <span className="font-display block text-[15px] font-semibold leading-tight">{L(heroProduct.name)}</span>
+                </span>
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -166,14 +174,14 @@ export function HomePage() {
 
         <div className="no-scrollbar -mx-4 flex snap-x gap-4 overflow-x-auto overflow-y-hidden px-4 pb-2 sm:-mx-6 sm:px-6">
           {leaves.map((c, i) => {
-            const count = productsOf(c.slug).length;
+            const count = c.products_count;
             return (
               <Reveal key={c.slug} delay={i * 60} className="snap-start">
                 <Link
                   to={`/katalog/${c.slug}`}
                   className="group relative block h-72 w-48 shrink-0 overflow-hidden rounded-xl border border-line shadow-[0_2px_14px_-10px_rgb(36_29_18/0.4)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-card sm:w-56"
                 >
-                  <img src={IMG[c.image]} alt={L(c.name)} loading="lazy" className="size-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  <img src={c.imageUrl} alt={L(c.name)} loading="lazy" className="size-full object-cover transition-transform duration-700 group-hover:scale-110" />
                   <div className="absolute inset-0 bg-gradient-to-t from-pine-950/85 via-pine-950/25 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-4 text-paper">
                     <span className="flex items-center gap-2 text-honey-300">
@@ -219,11 +227,21 @@ export function HomePage() {
             </div>
           </Reveal>
 
-          <div key={tab} className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
-            {shown.map((p, i) => (
-              <ProductCard key={`${tab}-${p.id}`} product={p} index={i} />
-            ))}
-          </div>
+          {showcase.error ? (
+            <LoadError
+              onRetry={() => {
+                showcase.reload();
+                hero.reload();
+                if (catalogError) reloadCatalog();
+              }}
+            />
+          ) : (
+            <div key={tab} className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+              {showcase.loading
+                ? Array.from({ length: 4 }).map((_, i) => <ProductSkeleton key={i} />)
+                : shown.map((p, i) => <ProductCard key={`${tab}-${p.id}`} product={p} index={i} />)}
+            </div>
+          )}
 
           <Reveal className="mt-10 text-center">
             <Link

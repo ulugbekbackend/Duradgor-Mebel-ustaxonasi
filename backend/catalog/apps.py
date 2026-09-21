@@ -10,7 +10,8 @@ class CatalogConfig(AppConfig):
         """Media fayllarni avtomatik tozalash signallarini ulash (core.mixins)."""
         from core.mixins import connect_media_cleanup_signals
 
-        from catalog.models import Product, ProductImage
+        from catalog.models import Category, Product, ProductImage
 
+        connect_media_cleanup_signals(Category, field_names=("image",))
         connect_media_cleanup_signals(Product, field_names=("cover",))
         connect_media_cleanup_signals(ProductImage, field_names=("image",))

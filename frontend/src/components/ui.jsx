@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useI18n } from "../lib/i18n";
 import { IconCheck, IconMinus, IconPlus } from "./icons";
 
 /* ---------------- Scroll reveal ---------------- */
@@ -87,8 +88,9 @@ export function QtyStepper({ value, onChange, max = 20, small = false }) {
       <button
         type="button"
         aria-label="Ko'paytirish"
+        disabled={value >= max}
         onClick={() => onChange(Math.min(max, value + 1))}
-        className={`${btn} grid place-items-center rounded-full text-walnut transition hover:bg-sand active:scale-90`}
+        className={`${btn} grid place-items-center rounded-full text-walnut transition hover:bg-sand active:scale-90 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent`}
       >
         <IconPlus width={15} height={15} />
       </button>
@@ -122,6 +124,23 @@ export function EmptyState({ title, text, children }) {
       <p className="mt-2 text-walnut">{text}</p>
       {children && <div className="mt-6">{children}</div>}
     </div>
+  );
+}
+
+/* ---------------- Yuklash xatosi (qayta urinish bilan) ---------------- */
+export function LoadError({ onRetry }) {
+  const { t } = useI18n();
+  return (
+    <EmptyState title={t("load_err_t")} text={t("load_err_p")}>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="inline-flex items-center gap-2 rounded-full bg-pine-900 px-6 py-3 font-bold text-paper transition hover:bg-pine-800 active:scale-95"
+        >
+          {t("retry")}
+        </button>
+      )}
+    </EmptyState>
   );
 }
 
