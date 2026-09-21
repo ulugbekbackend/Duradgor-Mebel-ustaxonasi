@@ -10,6 +10,7 @@
  *                                &is_featured=&is_new=&ids=&ordering=&page=&page_size=
  *   GET  {API}/catalog/products/{slug}/
  *   POST {API}/orders/
+ *   POST {API}/contact/
  *
  * Aks holda demo-rejim: frontend/src/data/catalog.js (backend'siz ko'rsatish uchun).
  * Ikkala rejim ham sahifalarga bir xil shakl qaytaradi:
@@ -190,24 +191,34 @@ export async function fetchProduct(slug) {
   return p ? productFromDemo(p) : null;
 }
 
-/* ------------------------------ Buyurtma ------------------------------ */
-export async function createOrder(payload) {
-  if (USE_API) {
-    const res = await fetch(`${API_URL}/orders/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const err = new Error("Buyurtma yuborilmadi");
-      err.fields = data; // DRF validatsiya xatolari: { phone: [...], items: [...] }
-      throw err;
-    }
-    return data;
+/* ------------------------------ Yuborish (POST) ------------------------------ */
+async function postJson(path, payload, failMessage) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(failMessage);
+    err.status = res.status; // 429 — juda ko'p so'rov (throttle)
+    err.fields = data; // DRF validatsiya xatolari: { phone: [...], items: [...] } yoki { detail: "..." }
+    throw err;
   }
+  return data;
+}
+
+export async function createOrder(payload) {
+  if (USE_API) return postJson("/orders/", payload, "Buyurtma yuborilmadi");
   await delay(900);
   // Backend order_number = f"DG-{id}" formatini qaytaradi
   const id = 1400 + Math.floor(Math.random() * 90);
   return { id, order_number: `DG-${id}`, payment_status: "pending" };
+}
+
+/** Aloqa formasi: { name, phone, message }. */
+export async function sendContactMessage(payload) {
+  if (USE_API) return postJson("/contact/", payload, "Xabar yuborilmadi");
+  await delay(700);
+  return { id: 0, ...payload };
 }

@@ -4,6 +4,7 @@ import { formatPrice } from "../data/catalog";
 import { useI18n } from "../lib/i18n";
 import { useSEO } from "../lib/seo";
 import { createOrder } from "../lib/api";
+import { firstError, isValidPhone } from "../lib/validators";
 import { useCart, useCartLines } from "../store/cart";
 import { EmptyState, LoadError, Reveal } from "../components/ui";
 import { TG_LINK } from "../components/layout";
@@ -102,7 +103,7 @@ export function CheckoutPage() {
   const validate = () => {
     const e = {};
     if (name.trim().length < 2) e.name = t("err_required");
-    if (!/^\+?[\d\s\-()]{9,17}$/.test(phone.trim())) e.phone = t("err_phone");
+    if (!isValidPhone(phone)) e.phone = t("err_phone");
     if (address.trim().length < 5) e.address = t("err_required");
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -129,23 +130,16 @@ export function CheckoutPage() {
       clear();
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
+      if (err.status === 429) {
+        setErrors({ form: t("err_throttle") });
+        return;
+      }
       const f = err.fields ?? {};
-      // DRF xatolari ichma-ich keladi: ["..."], { "0": { variant: ["..."] } } — birinchi matnni olamiz
-      const first = (v) => {
-        if (typeof v === "string") return v;
-        if (v && typeof v === "object") {
-          for (const x of Object.values(v)) {
-            const m = first(x);
-            if (m) return m;
-          }
-        }
-        return undefined;
-      };
       setErrors({
-        name: first(f.full_name),
-        phone: first(f.phone),
-        address: first(f.address),
-        form: first(f.items) || first(f.detail) || (f.full_name || f.phone || f.address ? undefined : t("err_send")),
+        name: firstError(f.full_name),
+        phone: firstError(f.phone),
+        address: firstError(f.address),
+        form: firstError(f.items) || firstError(f.detail) || (f.full_name || f.phone || f.address ? undefined : t("err_send")),
       });
     } finally {
       setSending(false);
