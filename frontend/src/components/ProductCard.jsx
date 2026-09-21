@@ -21,7 +21,7 @@ export function ProductCard({ product, index = 0 }) {
 
   const onAdd = (e) => {
     e.preventDefault();
-    add(product.id);
+    add(product.id, 1, product.variants[0]?.id ?? null);
     toast(t("toast_added"));
     setAdded(true);
     window.clearTimeout(timer.current);

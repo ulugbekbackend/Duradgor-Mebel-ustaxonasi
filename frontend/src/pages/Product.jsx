@@ -115,7 +115,7 @@ export function ProductPage() {
   const price = product.price + (selected?.price_delta ?? 0); // backend buyurtmada ham shunday hisoblaydi
 
   const onAdd = () => {
-    add(product.id, qty, variant);
+    add(product.id, qty, selected?.id ?? null);
     toast(t("toast_added"));
     setAdded(true);
     window.clearTimeout(timer.current);
@@ -123,7 +123,7 @@ export function ProductPage() {
   };
 
   const onBuyNow = () => {
-    add(product.id, qty, variant);
+    add(product.id, qty, selected?.id ?? null);
     navigate("/buyurtma");
   };
 

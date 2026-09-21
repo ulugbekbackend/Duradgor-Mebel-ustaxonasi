@@ -1,27 +1,30 @@
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { IMG } from "../data/images";
-import { PRODUCTS, formatPrice } from "../data/catalog";
+import { formatPrice } from "../data/catalog";
+import { fetchProducts } from "../lib/api";
+import { useAsync } from "../lib/useAsync";
 import { useI18n } from "../lib/i18n";
 import { useSEO } from "../lib/seo";
-import { findProductById, useCart } from "../store/cart";
-import { EmptyState, QtyStepper, Reveal, useToast } from "../components/ui";
+import { useCart, useCartLines } from "../store/cart";
+import { EmptyState, LoadError, QtyStepper, Reveal, useToast } from "../components/ui";
 import { ProductCard } from "../components/ProductCard";
 import { IconArrow, IconCard, IconCheck, IconShield, IconTrash, IconTruck } from "../components/icons";
 
 export function CartPage() {
   const { t, L } = useI18n();
-  const { items, setQty, remove, clear, total, count } = useCart();
+  const { items, setQty, remove, clear, count } = useCart();
+  const { lines, total, loading, error, reload } = useCartLines();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useSEO({ title: `${t("cart_title")} — Duradgor Mebel` });
 
-  // Savatda yo'q mahsulotlardan tavsiyalar
+  // Savatda yo'q mahsulotlardan tavsiyalar (ommaboplar)
+  const popular = useAsync(() => fetchProducts({ sort: "popular", pageSize: 8 }), []);
   const maybe = useMemo(() => {
     const inCart = new Set(items.map((i) => i.productId));
-    return PRODUCTS.filter((p) => !inCart.has(p.id)).sort((a, b) => b.popularity - a.popularity).slice(0, 4);
-  }, [items]);
+    return (popular.data?.results ?? []).filter((p) => !inCart.has(p.id)).slice(0, 4);
+  }, [items, popular.data]);
 
   if (items.length === 0) {
     return (
@@ -69,15 +72,17 @@ export function CartPage() {
 
       <div className="mt-7 grid gap-8 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">
-          {items.map((item, idx) => {
-            const p = findProductById(item.productId);
-            if (!p) return null;
-            const v = p.variants[item.variant] ?? p.variants[0];
+          {error && <LoadError onRetry={reload} />}
+          {loading &&
+            items.map((item) => (
+              <div key={`${item.productId}-${item.variantId}`} className="h-32 animate-pulse rounded-xl border border-line bg-sand/70" />
+            ))}
+          {lines.map(({ item, product: p, variant: v, unitPrice, lineTotal }, idx) => {
             return (
-              <Reveal key={`${item.productId}-${item.variant}`} delay={idx * 60}>
+              <Reveal key={`${item.productId}-${item.variantId}`} delay={idx * 60}>
                 <div className="flex gap-4 rounded-xl border border-line bg-white/70 p-3.5 shadow-[0_2px_12px_-10px_rgb(36_29_18/0.35)] transition hover:border-honey-400/60 sm:items-center sm:p-4">
                   <Link to={`/mahsulot/${p.slug}`} className="shrink-0">
-                    <img src={IMG[p.image]} alt={L(p.name)} className="size-24 rounded-lg object-cover sm:size-28" />
+                    <img src={p.imageUrl} alt={L(p.name)} className="size-24 rounded-lg object-cover sm:size-28" />
                   </Link>
                   <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
                     <div className="min-w-0 flex-1">
@@ -85,22 +90,23 @@ export function CartPage() {
                         {L(p.name)}
                       </Link>
                       <p className="mt-0.5 flex items-center gap-2 text-[13px] text-walnut">
-                        <span className="size-3 rounded-full border border-line" style={{ backgroundColor: v.hex }} />
-                        {L(v.name)} · {L(p.materialLabel)}
+                        {v && <span className="size-3 rounded-full border border-line" style={{ backgroundColor: v.hex }} />}
+                        {v ? `${L(v.name)} · ` : ""}
+                        {L(p.materialLabel)}
                       </p>
-                      <p className="mt-1 text-sm font-bold text-walnut sm:hidden">{formatPrice(p.price)}</p>
+                      <p className="mt-1 text-sm font-bold text-walnut sm:hidden">{formatPrice(unitPrice)}</p>
                       {p.status === "on_order" && (
                         <p className="mt-1 inline-block rounded-full bg-honey-100 px-2.5 py-0.5 text-[11.5px] font-bold text-honey-700">
                           {t("on_order_note")}
                         </p>
                       )}
                     </div>
-                    <p className="hidden w-36 text-[15px] font-bold sm:block">{formatPrice(p.price)}</p>
-                    <QtyStepper small value={item.qty} onChange={(q) => setQty(item.productId, item.variant, q)} />
-                    <p className="w-32 text-right text-[16px] font-extrabold text-pine-900">{formatPrice(p.price * item.qty)}</p>
+                    <p className="hidden w-36 text-[15px] font-bold sm:block">{formatPrice(unitPrice)}</p>
+                    <QtyStepper small value={item.qty} onChange={(q) => setQty(item.productId, item.variantId, q)} />
+                    <p className="w-32 text-right text-[16px] font-extrabold text-pine-900">{formatPrice(lineTotal)}</p>
                     <button
                       onClick={() => {
-                        remove(item.productId, item.variant);
+                        remove(item.productId, item.variantId);
                         toast(t("toast_removed"));
                       }}
                       aria-label={t("remove")}

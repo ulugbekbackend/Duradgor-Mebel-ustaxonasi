@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { IMG } from "../data/images";
 import { formatPrice } from "../data/catalog";
 import { useI18n } from "../lib/i18n";
 import { useSEO } from "../lib/seo";
 import { createOrder } from "../lib/api";
-import { findProductById, useCart } from "../store/cart";
-import { EmptyState, Reveal } from "../components/ui";
+import { useCart, useCartLines } from "../store/cart";
+import { EmptyState, LoadError, Reveal } from "../components/ui";
 import { TG_LINK } from "../components/layout";
 import { IconArrow, IconCheck, IconChevron, IconShield, IconTelegram, IconTruck } from "../components/icons";
 
@@ -86,7 +85,8 @@ function Faq() {
 
 export function CheckoutPage() {
   const { t, L } = useI18n();
-  const { items, total, clear } = useCart();
+  const { items, clear } = useCart();
+  const { lines, total, loading: linesLoading, error: linesError, reload: reloadLines } = useCartLines();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -110,7 +110,7 @@ export function CheckoutPage() {
 
   const submit = async (ev) => {
     ev.preventDefault();
-    if (!validate() || items.length === 0) return;
+    if (!validate() || lines.length === 0) return;
     setSending(true);
     try {
       const res = await createOrder({
@@ -119,10 +119,10 @@ export function CheckoutPage() {
         address: address.trim(),
         comment: comment.trim(),
         payment_method: payment,
-        items: items.map((i) => ({
-          product: i.productId,
-          variant: findProductById(i.productId)?.variants[i.variant]?.id ?? null,
-          quantity: i.qty,
+        items: lines.map(({ item }) => ({
+          product: item.productId,
+          variant: item.variantId,
+          quantity: item.qty,
         })),
       });
       setResult(res);
@@ -326,21 +326,22 @@ export function CheckoutPage() {
         <Reveal delay={120}>
           <aside className="sticky top-32 rounded-xl border border-line bg-white/70 p-6 shadow-card">
             <h2 className="font-display text-xl font-bold">{t("co_your")}</h2>
+            {linesError && <LoadError onRetry={reloadLines} />}
             <ul className="mt-5 space-y-4">
-              {items.map((i) => {
-                const p = findProductById(i.productId);
-                if (!p) return null;
-                return (
-                  <li key={`${i.productId}-${i.variant}`} className="flex items-center gap-3">
-                    <img src={IMG[p.image]} alt="" className="size-14 rounded-lg object-cover" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-bold">{L(p.name)}</p>
-                      <p className="text-[12.5px] text-walnut">{i.qty} × {formatPrice(p.price)}</p>
-                    </div>
-                    <p className="text-[14px] font-extrabold">{formatPrice(p.price * i.qty)}</p>
-                  </li>
-                );
-              })}
+              {linesLoading && <li className="h-14 animate-pulse rounded-lg bg-sand/70" />}
+              {lines.map(({ item, product: p, variant: v, unitPrice, lineTotal }) => (
+                <li key={`${item.productId}-${item.variantId}`} className="flex items-center gap-3">
+                  <img src={p.imageUrl} alt="" className="size-14 rounded-lg object-cover" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[14px] font-bold">{L(p.name)}</p>
+                    <p className="text-[12.5px] text-walnut">
+                      {v ? `${L(v.name)} · ` : ""}
+                      {item.qty} × {formatPrice(unitPrice)}
+                    </p>
+                  </div>
+                  <p className="text-[14px] font-extrabold">{formatPrice(lineTotal)}</p>
+                </li>
+              ))}
             </ul>
             <dl className="mt-5 space-y-2.5 border-t border-line pt-4 text-[15px]">
               <div className="flex justify-between">
