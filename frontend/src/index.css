@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f6f1e7;
+  --color-sand: #ece4d0;
+  --color-line: #dcd1b8;
+  --color-ink: #241d12;
+  --color-walnut: #6d5738;
+  --color-pine-950: #0c2118;
+  --color-pine-900: #123024;
+  --color-pine-800: #1a4531;
+  --color-pine-700: #256247;
+  --color-pine-500: #3d7f5f;
+  --color-pine-200: #bcd4c1;
+  --color-pine-100: #dfeadf;
+  --color-honey-700: #8f610d;
+  --color-honey-600: #b07a14;
+  --color-honey-500: #d99b26;
+  --color-honey-400: #eab64f;
+  --color-honey-300: #f4d188;
+  --color-honey-100: #faeac5;
+  --color-rust: #a44a2a;
+
+  --font-display: "Fraunces", "Georgia", serif;
+  --font-body: "Karla", "Segoe UI", system-ui, sans-serif;
+
+  --shadow-lift: 0 18px 40px -18px rgb(18 48 36 / 0.35);
+  --shadow-card: 0 10px 30px -14px rgb(36 29 18 / 0.25);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- textures ---------- */
+.noise::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.woodlines {
+  background-image: repeating-linear-gradient(
+    93deg,
+    rgb(255 255 255 / 0.03) 0px,
+    rgb(255 255 255 / 0.03) 1px,
+    transparent 1px,
+    transparent 9px
+  );
+}
+
+/* ---------- keyframes ---------- */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes kenburns {
+  from { transform: scale(1) translateY(0); }
+  to { transform: scale(1.09) translateY(-1.5%); }
+}
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+@keyframes bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.45); }
+  100% { transform: scale(1); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes check-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.anim-marquee { animation: marquee 26s linear infinite; }
+.anim-kenburns { animation: kenburns 14s ease-in-out infinite alternate; }
+.anim-spin-slow { animation: spin-slow 22s linear infinite; }
+.anim-bump { animation: bump 0.45s cubic-bezier(0.2, 1.4, 0.5, 1); }
+.anim-toast { animation: toast-in 0.35s cubic-bezier(0.2, 1, 0.4, 1) both; }
+.anim-rise { animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.anim-check { animation: check-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.anim-float { animation: float-y 5s ease-in-out infinite; }
+
+/* ---------- scroll reveal ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------- misc ---------- */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+::selection {
+  background: var(--color-honey-400);
+  color: var(--color-pine-950);
+}
+
+input, select, textarea, button { font-family: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--color-honey-500);
+  outline-offset: 2px;
+}
+
+.font-display { font-family: var(--font-display); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal { opacity: 1; transform: none; }
+}
