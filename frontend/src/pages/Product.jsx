@@ -1,11 +1,14 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { IMG } from "../data/images";
-import { discountOf, formatPrice, getCategory, getProduct, similarTo } from "../data/catalog";
+import { discountOf, formatPrice } from "../data/catalog";
+import { fetchProduct, fetchProducts } from "../lib/api";
+import { useAsync } from "../lib/useAsync";
 import { useI18n } from "../lib/i18n";
 import { useSEO } from "../lib/seo";
 import { useCart } from "../store/cart";
-import { QtyStepper, Reveal, useToast, EmptyState } from "../components/ui";
+import { useCatalog } from "../store/catalog";
+import { LoadError, ProductSkeleton, QtyStepper, Reveal, useToast, EmptyState } from "../components/ui";
 import { ProductCard } from "../components/ProductCard";
 import { TG_LINK } from "../components/layout";
 import {
@@ -15,7 +18,7 @@ import {
 
 export function ProductPage() {
   const { slug } = useParams();
-  const product = getProduct(slug);
+  const { data: product, loading, error, reload } = useAsync(() => fetchProduct(slug), [slug]);
   const { t, L } = useI18n();
   const { add } = useCart();
   const { toast } = useToast();
@@ -26,15 +29,63 @@ export function ProductPage() {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const timer = useRef(undefined);
+  const { getCategory } = useCatalog();
+
+  // Boshqa mahsulotga o'tilganda tanlovlar boshidan boshlanadi
+  useEffect(() => {
+    setImgIdx(0);
+    setVariant(0);
+    setQty(1);
+  }, [slug]);
 
   const category = product ? getCategory(product.category) : undefined;
-  const similar = useMemo(() => (product ? similarTo(product) : []), [product]);
+
+  // O'xshashlar: avval shu kategoriyadan, yetmasa ommaboplardan (o'zi chiqarib tashlanadi)
+  const related = useAsync(
+    () =>
+      product
+        ? Promise.all([
+            fetchProducts({ category: product.category, sort: "popular", pageSize: 5 }),
+            fetchProducts({ sort: "popular", pageSize: 8 }),
+          ])
+        : Promise.resolve(null),
+    [product?.slug]
+  );
+  const similar = useMemo(() => {
+    if (!product || !related.data) return [];
+    const seen = new Set([product.id]);
+    return [...related.data[0].results, ...related.data[1].results]
+      .filter((p) => !seen.has(p.id) && seen.add(p.id))
+      .slice(0, 4);
+  }, [product, related.data]);
 
   useSEO({
     title: product ? `${L(product.name)} — ${formatPrice(product.price)} | Duradgor Mebel` : "Mahsulot — Duradgor Mebel",
     description: product ? L(product.description).slice(0, 160) : undefined,
-    image: product ? IMG[product.image] : undefined,
+    image: product ? product.imageUrl : undefined,
   });
+
+  if (loading) {
+    return (
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2">
+        <ProductSkeleton />
+        <div className="space-y-4">
+          <div className="h-4 w-1/4 animate-pulse rounded bg-sand" />
+          <div className="h-10 w-3/4 animate-pulse rounded bg-sand" />
+          <div className="h-8 w-1/3 animate-pulse rounded bg-sand" />
+          <div className="h-24 animate-pulse rounded bg-sand" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16">
+        <LoadError onRetry={reload} />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -52,11 +103,16 @@ export function ProductPage() {
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
   const shareText = `${L(product.name)} — ${formatPrice(product.price)}`;
 
-  const gallery = [
-    { src: IMG[product.image], label: L(product.name), cls: "" },
-    { src: IMG.workshop, label: "Ustaxona", cls: "" },
-    { src: IMG[product.image], label: "Detal", cls: "scale-[1.75]" },
-  ];
+  // Admin'da qo'shimcha rasmlar yuklangan bo'lsa — ular, aks holda asosiy rasm + ustaxona + detal
+  const gallery = product.gallery.length
+    ? [product.imageUrl, ...product.gallery].map((src, i) => ({ src, label: `${L(product.name)} ${i + 1}`, cls: "" }))
+    : [
+        { src: product.imageUrl, label: L(product.name), cls: "" },
+        { src: IMG.workshop, label: "Ustaxona", cls: "" },
+        { src: product.imageUrl, label: "Detal", cls: "scale-[1.75]" },
+      ];
+  const selected = product.variants[variant];
+  const price = product.price + (selected?.price_delta ?? 0); // backend buyurtmada ham shunday hisoblaydi
 
   const onAdd = () => {
     add(product.id, qty, variant);
@@ -158,32 +214,35 @@ export function ProductPage() {
           </div>
 
           <div className="mt-5 flex items-end gap-3">
-            <p className="font-display text-[34px] font-bold leading-none text-pine-900">{formatPrice(product.price)}</p>
+            <p className="font-display text-[34px] font-bold leading-none text-pine-900">{formatPrice(price)}</p>
             {product.old_price && (
               <p className="pb-0.5 text-lg font-semibold text-walnut/70 line-through">{formatPrice(product.old_price)}</p>
             )}
           </div>
 
           {/* Rang variantlari */}
-          <div className="mt-6">
-            <p className="text-sm font-bold text-walnut">
-              {t("color")} <span className="text-ink">{L(product.variants[variant].name)}</span>
-            </p>
-            <div className="mt-2.5 flex gap-2.5">
-              {product.variants.map((v, i) => (
-                <button
-                  key={v.hex}
-                  onClick={() => setVariant(i)}
-                  title={L(v.name)}
-                  aria-label={L(v.name)}
-                  className={`size-9 rounded-full border-2 transition-all duration-200 ${
-                    variant === i ? "scale-110 border-pine-900 ring-2 ring-honey-400 ring-offset-2 ring-offset-paper" : "border-line hover:scale-105"
-                  }`}
-                  style={{ backgroundColor: v.hex }}
-                />
-              ))}
+          {selected && (
+            <div className="mt-6">
+              <p className="text-sm font-bold text-walnut">
+                {t("color")} <span className="text-ink">{L(selected.name)}</span>
+                {selected.price_delta > 0 && <span className="ml-1.5 text-honey-700">+{formatPrice(selected.price_delta)}</span>}
+              </p>
+              <div className="mt-2.5 flex gap-2.5">
+                {product.variants.map((v, i) => (
+                  <button
+                    key={v.hex}
+                    onClick={() => setVariant(i)}
+                    title={L(v.name)}
+                    aria-label={L(v.name)}
+                    className={`size-9 rounded-full border-2 transition-all duration-200 ${
+                      variant === i ? "scale-110 border-pine-900 ring-2 ring-honey-400 ring-offset-2 ring-offset-paper" : "border-line hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: v.hex }}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Miqdor + tugmalar */}
           <div className="mt-7 flex flex-wrap items-center gap-4">
