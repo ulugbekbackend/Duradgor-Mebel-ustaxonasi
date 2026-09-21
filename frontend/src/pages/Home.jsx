@@ -53,7 +53,7 @@ export function HomePage() {
     image: IMG.workshop,
   });
 
-  const { subcategories: leaves } = useCatalog();
+  const { subcategories: leaves, error: catalogError, reload: reloadCatalog } = useCatalog();
 
   // Vitrina: tab bo'yicha backenddan (8 tagacha)
   const showcase = useAsync(
@@ -228,7 +228,13 @@ export function HomePage() {
           </Reveal>
 
           {showcase.error ? (
-            <LoadError onRetry={showcase.reload} />
+            <LoadError
+              onRetry={() => {
+                showcase.reload();
+                hero.reload();
+                if (catalogError) reloadCatalog();
+              }}
+            />
           ) : (
             <div key={tab} className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
               {showcase.loading
