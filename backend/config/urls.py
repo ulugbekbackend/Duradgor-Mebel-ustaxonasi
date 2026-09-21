@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/health/", health, name="health"),
     path("api/catalog/", include("catalog.urls")),
     path("api/orders/", include("orders.urls")),
+    path("api/contact/", include("contact.urls")),
     # API hujjatlari (drf-spectacular)
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),

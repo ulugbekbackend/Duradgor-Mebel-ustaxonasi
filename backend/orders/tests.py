@@ -70,6 +70,20 @@ class OrderCreateApiTests(APITestCase):
         response = self.client.post(reverse("order-list"), payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_phone_formats(self):
+        product = make_product(stock=10)
+        for phone, ok in [
+            ("+998 (91) 222-33-44", True),  # keng tarqalgan format (18 belgi)
+            ("90 123 45 67", True),
+            ("+998", False),
+            ("+998 90 12a 45 67", False),
+            ("1" * 16, False),
+        ]:
+            payload = self._payload(product.id, quantity=1)
+            payload["phone"] = phone
+            response = self.client.post(reverse("order-list"), payload, format="json")
+            self.assertEqual(response.status_code == status.HTTP_201_CREATED, ok, (phone, response.data))
+
     def test_quantity_more_than_stock_rejected(self):
         product = make_product(stock=2)
         response = self.client.post(

@@ -1,6 +1,7 @@
 """Umumiy yordamchi funksiyalar: Telegram bildirishnoma, WebP konvertatsiya."""
 import logging
 import threading
+from html import escape
 from io import BytesIO
 
 from django.conf import settings
@@ -11,12 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 # ------------------------------------------------------------------ #
-# Telegram bot — yangi buyurtma kelganda ustaga xabar                  #
+# Telegram bot — ustaga xabarlar (buyurtma, aloqa formasi)            #
 # ------------------------------------------------------------------ #
-def send_telegram_order_notification(order) -> bool:
-    """Yangi buyurtma haqida ustaga Telegram xabar yuboradi.
+def send_telegram_message(text: str) -> bool:
+    """Ustaning Telegram chatiga HTML xabar yuboradi.
 
-    Xato bo'lsa buyurtma baribir saqlanadi — faqat logga yoziladi.
+    Matndagi foydalanuvchi ma'lumotlari chaqiruvchi tomonidan escape() qilinishi shart.
+    Xato bo'lsa faqat logga yoziladi (asosiy amal baribir saqlanadi).
     """
     import requests  # import ichkarida: testlarda majburiy bo'lmasligi uchun
 
@@ -25,24 +27,6 @@ def send_telegram_order_notification(order) -> bool:
     if not token or not chat_id:
         logger.warning("Telegram sozlanmagan (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID)")
         return False
-
-    items_text = "\n".join(
-        f"  ▪ {item.product_name}{f' ({item.variant_name})' if item.variant_name else ''}"
-        f" × {item.quantity} — {item.line_total:,.0f} so'm"
-        for item in order.items.all()
-    )
-    text = (
-        f"🪑 <b>Yangi buyurtma — {order.number}</b>\n\n"
-        f"👤 {order.customer.full_name}\n"
-        f"📞 {order.customer.phone}\n"
-        f"📍 {order.address}\n\n"
-        f"<b>Mahsulotlar:</b>\n{items_text}\n\n"
-        f"💰 Jami: <b>{order.total:,.0f} so'm</b>\n"
-        f"💳 To'lov: {order.get_payment_method_display()} "
-        f"({order.get_payment_status_display()})"
-    )
-    if order.comment:
-        text += f"\n💬 Izoh: {order.comment}"
 
     try:
         response = requests.post(
@@ -57,21 +41,71 @@ def send_telegram_order_notification(order) -> bool:
         return False
 
 
-def notify_order_async(order_id: int) -> None:
-    """Telegram xabarini fon oqimida yuboradi — mijoz javobni Telegram'ni kutmasdan oladi."""
+def send_telegram_order_notification(order) -> bool:
+    """Yangi buyurtma haqida ustaga Telegram xabar."""
+    items_text = "\n".join(
+        f"  ▪ {escape(item.product_name)}{f' ({escape(item.variant_name)})' if item.variant_name else ''}"
+        f" × {item.quantity} — {item.line_total:,.0f} so'm"
+        for item in order.items.all()
+    )
+    text = (
+        f"🪑 <b>Yangi buyurtma — {escape(order.number)}</b>\n\n"
+        f"👤 {escape(order.customer.full_name)}\n"
+        f"📞 {escape(order.customer.phone)}\n"
+        f"📍 {escape(order.address)}\n\n"
+        f"<b>Mahsulotlar:</b>\n{items_text}\n\n"
+        f"💰 Jami: <b>{order.total:,.0f} so'm</b>\n"
+        f"💳 To'lov: {order.get_payment_method_display()} "
+        f"({order.get_payment_status_display()})"
+    )
+    if order.comment:
+        text += f"\n💬 Izoh: {escape(order.comment)}"
+    return send_telegram_message(text)
+
+
+def send_telegram_contact_notification(message) -> bool:
+    """Aloqa formasidan kelgan xabar haqida ustaga Telegram xabar."""
+    text = (
+        f"✉️ <b>Saytdan yangi murojaat</b>\n\n"
+        f"👤 {escape(message.name)}\n"
+        f"📞 {escape(message.phone)}"
+    )
+    if message.message:
+        text += f"\n\n💬 {escape(message.message)}"
+    return send_telegram_message(text)
+
+
+def _run_in_background(job, label: str) -> None:
+    """Ishni fon oqimida bajaradi — mijoz javobni Telegram'ni kutmasdan oladi."""
 
     def _run():
-        from orders.models import Order
-
         try:
-            order = Order.objects.select_related("customer").prefetch_related("items").get(pk=order_id)
-            send_telegram_order_notification(order)
+            job()
         except Exception:  # noqa: BLE001
-            logger.exception("Buyurtma %s uchun Telegram xabari yuborilmadi", order_id)
+            logger.exception("%s: Telegram xabari yuborilmadi", label)
         finally:
             connection.close()  # oqimning o'z DB ulanishi
 
     threading.Thread(target=_run, daemon=True).start()
+
+
+def notify_order_async(order_id: int) -> None:
+    def job():
+        from orders.models import Order
+
+        order = Order.objects.select_related("customer").prefetch_related("items").get(pk=order_id)
+        send_telegram_order_notification(order)
+
+    _run_in_background(job, f"Buyurtma {order_id}")
+
+
+def notify_contact_async(message_id: int) -> None:
+    def job():
+        from contact.models import ContactMessage
+
+        send_telegram_contact_notification(ContactMessage.objects.get(pk=message_id))
+
+    _run_in_background(job, f"Murojaat {message_id}")
 
 
 # ------------------------------------------------------------------ #

@@ -1,19 +1,12 @@
-import re
-
 from django.db import transaction
 from django.db.models import F
 from rest_framework import serializers
 
 from catalog.models import Product, ProductVariant
 from core.utils import notify_order_async
+from core.validators import validate_phone
 
 from .models import Customer, Order, OrderItem
-
-
-def normalize_phone(value: str) -> str:
-    """'+998 (90) 123-45-67' → '+998901234567' — bitta mijoz bitta yozuvda saqlanadi."""
-    digits = re.sub(r"\D", "", value)
-    return f"+{digits}" if value.strip().startswith("+") else digits
 
 
 class OrderItemInputSerializer(serializers.Serializer):
@@ -47,10 +40,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "number", "total", "payment_status", "created_at"]
 
     def validate_phone(self, value):
-        value = value.strip()
-        if not re.match(r"^\+?[\d\s\-()]{9,17}$", value):
-            raise serializers.ValidationError("Telefon raqamini to'g'ri kiriting.")
-        return normalize_phone(value)
+        return validate_phone(value)
 
     @transaction.atomic
     def create(self, validated_data):

@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "core",
     "catalog",
     "orders",
+    "contact",
 ]
 
 MIDDLEWARE = [
@@ -126,6 +127,7 @@ REST_FRAMEWORK = {
         "anon": "1000/hour",  # SPA bir sahifada bir nechta so'rov yuboradi
         "user": "600/hour",
         "orders": "10/hour",  # buyurtma spam'iga qarshi (OrderThrottle scope)
+        "contact": "5/hour",  # aloqa formasi spam'iga qarshi (ContactThrottle scope)
     },
 }
 
