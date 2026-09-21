@@ -88,8 +88,9 @@ export function QtyStepper({ value, onChange, max = 20, small = false }) {
       <button
         type="button"
         aria-label="Ko'paytirish"
+        disabled={value >= max}
         onClick={() => onChange(Math.min(max, value + 1))}
-        className={`${btn} grid place-items-center rounded-full text-walnut transition hover:bg-sand active:scale-90`}
+        className={`${btn} grid place-items-center rounded-full text-walnut transition hover:bg-sand active:scale-90 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent`}
       >
         <IconPlus width={15} height={15} />
       </button>

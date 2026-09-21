@@ -10,6 +10,10 @@ import { useAsync } from "../lib/useAsync";
 const Ctx = createContext(null);
 const LS_KEY = "dg_cart_v2";
 const LS_KEY_V1 = "dg_cart_v1"; // eski format: variant — indeks
+export const MAX_QTY = 20; // bitta qator uchun yuqori chegara
+
+/** Mahsulotdan nechta sotish mumkin: "Mavjud" — stok, "Buyurtmaga" — cheklanmagan (backend ham shunday). */
+export const stockLimit = (product) => (product.status === "in_stock" ? product.stock : Infinity);
 
 const sameLine = (a, productId, variantId) => a.productId === productId && a.variantId === variantId;
 
@@ -45,7 +49,7 @@ export function CartProvider({ children }) {
     setItems((prev) => {
       const found = prev.find((i) => sameLine(i, productId, variantId));
       if (found) {
-        return prev.map((i) => (i === found ? { ...i, qty: Math.min(20, i.qty + qty) } : i));
+        return prev.map((i) => (i === found ? { ...i, qty: Math.min(MAX_QTY, i.qty + qty) } : i));
       }
       return [...prev, { productId, variantId, qty }];
     });
@@ -55,7 +59,7 @@ export function CartProvider({ children }) {
     setItems((prev) =>
       qty <= 0
         ? prev.filter((i) => !sameLine(i, productId, variantId))
-        : prev.map((i) => (sameLine(i, productId, variantId) ? { ...i, qty: Math.min(20, qty) } : i))
+        : prev.map((i) => (sameLine(i, productId, variantId) ? { ...i, qty: Math.min(MAX_QTY, qty) } : i))
     );
   }, []);
 
@@ -72,9 +76,15 @@ export function CartProvider({ children }) {
 
   const count = useMemo(() => items.reduce((c, i) => c + i.qty, 0), [items]);
 
+  /** Savatdagi shu mahsulotning jami soni (barcha ranglari). */
+  const qtyOf = useCallback(
+    (productId) => items.reduce((c, i) => (i.productId === productId ? c + i.qty : c), 0),
+    [items]
+  );
+
   const value = useMemo(
-    () => ({ items, count, add, setQty, remove, removeProducts, clear }),
-    [items, count, add, setQty, remove, removeProducts, clear]
+    () => ({ items, count, add, setQty, remove, removeProducts, clear, qtyOf }),
+    [items, count, add, setQty, remove, removeProducts, clear, qtyOf]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -88,7 +98,8 @@ export function useCart() {
 
 /**
  * Savat qatorlari backenddagi joriy narx bilan:
- * { lines: [{ item, product, variant, unitPrice, lineTotal }], total, loading, error, reload }.
+ * { lines: [{ item, product, variant, unitPrice, lineTotal, maxQty, overStock }], total, hasOverStock, loading, error, reload }.
+ * overStock — mahsulotning savatdagi jami soni ombordagidan ko'p (masalan, admin stokni kamaytirgan).
  * Backendda endi yo'q mahsulotlar savatdan o'chiriladi.
  */
 export function useCartLines() {
@@ -110,21 +121,32 @@ export function useCartLines() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
-  const lines = useMemo(
-    () =>
-      items
-        .map((item) => {
-          const product = byId.get(item.productId);
-          if (!product) return null;
-          const variant = product.variants.find((v) => v.id === item.variantId) ?? null;
-          const unitPrice = product.price + (variant?.price_delta ?? 0);
-          return { item, product, variant, unitPrice, lineTotal: unitPrice * item.qty };
-        })
-        .filter(Boolean),
-    [items, byId]
-  );
+  const lines = useMemo(() => {
+    const totalByProduct = new Map();
+    for (const i of items) totalByProduct.set(i.productId, (totalByProduct.get(i.productId) ?? 0) + i.qty);
+    return items
+      .map((item) => {
+        const product = byId.get(item.productId);
+        if (!product) return null;
+        const variant = product.variants.find((v) => v.id === item.variantId) ?? null;
+        const unitPrice = product.price + (variant?.price_delta ?? 0);
+        const limit = stockLimit(product);
+        const others = totalByProduct.get(item.productId) - item.qty; // shu mahsulotning boshqa ranglari
+        return {
+          item,
+          product,
+          variant,
+          unitPrice,
+          lineTotal: unitPrice * item.qty,
+          maxQty: Math.max(0, Math.min(MAX_QTY, limit - others)),
+          overStock: totalByProduct.get(item.productId) > limit,
+        };
+      })
+      .filter(Boolean);
+  }, [items, byId]);
   const total = useMemo(() => lines.reduce((s, l) => s + l.lineTotal, 0), [lines]);
+  const hasOverStock = lines.some((l) => l.overStock);
 
   // Birinchi yuklanishdagina "loading" — miqdor o'zgarganda sahifa sakramasin
-  return { lines, total, loading: loading && !data, error, reload };
+  return { lines, total, hasOverStock, loading: loading && !data, error, reload };
 }

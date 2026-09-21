@@ -3,14 +3,14 @@ import { Link } from "react-router-dom";
 import { IMG } from "../data/images";
 import { discountOf, formatPrice } from "../data/catalog";
 import { useI18n } from "../lib/i18n";
-import { useCart } from "../store/cart";
+import { stockLimit, useCart } from "../store/cart";
 import { useCatalog } from "../store/catalog";
 import { useToast, Reveal } from "./ui";
 import { IconCart, IconCheck } from "./icons";
 
 export function ProductCard({ product, index = 0 }) {
   const { t, L } = useI18n();
-  const { add } = useCart();
+  const { add, qtyOf } = useCart();
   const { toast } = useToast();
   const [added, setAdded] = useState(false);
   const timer = useRef(undefined);
@@ -21,6 +21,10 @@ export function ProductCard({ product, index = 0 }) {
 
   const onAdd = (e) => {
     e.preventDefault();
+    if (qtyOf(product.id) >= stockLimit(product)) {
+      toast(product.stock > 0 ? t("stock_all_in_cart") : t("stock_none"));
+      return;
+    }
     add(product.id, 1, product.variants[0]?.id ?? null);
     toast(t("toast_added"));
     setAdded(true);

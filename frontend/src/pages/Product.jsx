@@ -6,7 +6,7 @@ import { fetchProduct, fetchProducts } from "../lib/api";
 import { useAsync } from "../lib/useAsync";
 import { useI18n } from "../lib/i18n";
 import { useSEO } from "../lib/seo";
-import { useCart } from "../store/cart";
+import { MAX_QTY, stockLimit, useCart } from "../store/cart";
 import { useCatalog } from "../store/catalog";
 import { LoadError, ProductSkeleton, QtyStepper, Reveal, useToast, EmptyState } from "../components/ui";
 import { ProductCard } from "../components/ProductCard";
@@ -20,7 +20,7 @@ export function ProductPage() {
   const { slug } = useParams();
   const { data: product, loading, error, reload } = useAsync(() => fetchProduct(slug), [slug]);
   const { t, L } = useI18n();
-  const { add } = useCart();
+  const { add, qtyOf } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -113,9 +113,15 @@ export function ProductPage() {
       ];
   const selected = product.variants[variant];
   const price = product.price + (selected?.price_delta ?? 0); // backend buyurtmada ham shunday hisoblaydi
+  // Qo'shish mumkin bo'lgan miqdor: ombordagi − savatdagi (barcha ranglar), 20 tagacha
+  const available = Math.min(MAX_QTY, stockLimit(product) - qtyOf(product.id));
+  const canAdd = available > 0;
+  const qtyToAdd = Math.max(1, Math.min(qty, available));
 
   const onAdd = () => {
-    add(product.id, qty, selected?.id ?? null);
+    if (!canAdd) return;
+    add(product.id, qtyToAdd, selected?.id ?? null);
+    setQty(1);
     toast(t("toast_added"));
     setAdded(true);
     window.clearTimeout(timer.current);
@@ -123,7 +129,7 @@ export function ProductPage() {
   };
 
   const onBuyNow = () => {
-    add(product.id, qty, selected?.id ?? null);
+    if (canAdd) add(product.id, qtyToAdd, selected?.id ?? null);
     navigate("/buyurtma");
   };
 
@@ -246,10 +252,11 @@ export function ProductPage() {
 
           {/* Miqdor + tugmalar */}
           <div className="mt-7 flex flex-wrap items-center gap-4">
-            <QtyStepper value={qty} onChange={setQty} />
+            <QtyStepper value={qtyToAdd} onChange={setQty} max={Math.max(1, available)} />
             <button
               onClick={onAdd}
-              className={`inline-flex flex-1 items-center justify-center gap-2.5 rounded-full px-7 py-3.5 font-bold text-paper shadow-card transition active:scale-95 sm:flex-none ${
+              disabled={!canAdd}
+              className={`inline-flex flex-1 items-center justify-center gap-2.5 rounded-full px-7 py-3.5 font-bold text-paper shadow-card transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none ${
                 added ? "bg-pine-700" : "bg-pine-900 hover:bg-pine-800"
               }`}
             >
@@ -263,6 +270,11 @@ export function ProductPage() {
           >
             {t("buy_now")}
           </button>
+          {!canAdd && (
+            <p className="mt-3 rounded-lg bg-honey-100/80 px-3.5 py-2.5 text-[13px] font-semibold text-honey-700">
+              {product.stock > 0 ? t("stock_all_in_cart") : t("stock_none")}
+            </p>
+          )}
 
           {/* Ulashish */}
           <div className="mt-6 flex flex-wrap items-center gap-2.5">

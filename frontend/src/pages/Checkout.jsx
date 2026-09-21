@@ -87,7 +87,7 @@ function Faq() {
 export function CheckoutPage() {
   const { t, L } = useI18n();
   const { items, clear } = useCart();
-  const { lines, total, loading: linesLoading, error: linesError, reload: reloadLines } = useCartLines();
+  const { lines, total, hasOverStock, loading: linesLoading, error: linesError, reload: reloadLines } = useCartLines();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -111,7 +111,7 @@ export function CheckoutPage() {
 
   const submit = async (ev) => {
     ev.preventDefault();
-    if (!validate() || lines.length === 0) return;
+    if (!validate() || lines.length === 0 || hasOverStock) return;
     setSending(true);
     try {
       const res = await createOrder({
@@ -262,6 +262,12 @@ export function CheckoutPage() {
                 </p>
               </fieldset>
 
+              {hasOverStock && (
+                <p role="alert" className="rounded-lg bg-rust/10 px-3.5 py-2.5 text-[13px] font-semibold text-rust">
+                  {t("stock_fix_cart")}{" "}
+                  <Link to="/savat" className="underline underline-offset-2">{t("cart")}</Link>
+                </p>
+              )}
               {errors.form && (
                 <p role="alert" className="rounded-lg bg-rust/10 px-3.5 py-2.5 text-[13px] font-semibold text-rust">
                   {errors.form}
@@ -269,7 +275,7 @@ export function CheckoutPage() {
               )}
               <button
                 type="submit"
-                disabled={sending}
+                disabled={sending || hasOverStock}
                 className="group flex w-full items-center justify-center gap-2.5 rounded-full bg-honey-400 py-4 text-[16px] font-bold text-pine-950 shadow-card transition hover:bg-honey-300 active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
               >
                 {sending ? (

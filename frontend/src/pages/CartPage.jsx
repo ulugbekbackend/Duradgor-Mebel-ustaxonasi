@@ -13,7 +13,7 @@ import { IconArrow, IconCard, IconCheck, IconShield, IconTrash, IconTruck } from
 export function CartPage() {
   const { t, L } = useI18n();
   const { items, setQty, remove, clear, count } = useCart();
-  const { lines, total, loading, error, reload } = useCartLines();
+  const { lines, total, hasOverStock, loading, error, reload } = useCartLines();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -77,7 +77,7 @@ export function CartPage() {
             items.map((item) => (
               <div key={`${item.productId}-${item.variantId}`} className="h-32 animate-pulse rounded-xl border border-line bg-sand/70" />
             ))}
-          {lines.map(({ item, product: p, variant: v, unitPrice, lineTotal }, idx) => {
+          {lines.map(({ item, product: p, variant: v, unitPrice, lineTotal, maxQty, overStock }, idx) => {
             return (
               <Reveal key={`${item.productId}-${item.variantId}`} delay={idx * 60}>
                 <div className="flex gap-4 rounded-xl border border-line bg-white/70 p-3.5 shadow-[0_2px_12px_-10px_rgb(36_29_18/0.35)] transition hover:border-honey-400/60 sm:items-center sm:p-4">
@@ -95,6 +95,11 @@ export function CartPage() {
                         {L(p.materialLabel)}
                       </p>
                       <p className="mt-1 text-sm font-bold text-walnut sm:hidden">{formatPrice(unitPrice)}</p>
+                      {overStock && (
+                        <p className="mt-1 inline-block rounded-full bg-rust/10 px-2.5 py-0.5 text-[11.5px] font-bold text-rust">
+                          {t("stock_only")} {p.stock} {t("pieces")}
+                        </p>
+                      )}
                       {p.status === "on_order" && (
                         <p className="mt-1 inline-block rounded-full bg-honey-100 px-2.5 py-0.5 text-[11.5px] font-bold text-honey-700">
                           {t("on_order_note")}
@@ -102,7 +107,7 @@ export function CartPage() {
                       )}
                     </div>
                     <p className="hidden w-36 text-[15px] font-bold sm:block">{formatPrice(unitPrice)}</p>
-                    <QtyStepper small value={item.qty} onChange={(q) => setQty(item.productId, item.variantId, q)} />
+                    <QtyStepper small value={item.qty} max={maxQty} onChange={(q) => setQty(item.productId, item.variantId, q)} />
                     <p className="w-32 text-right text-[16px] font-extrabold text-pine-900">{formatPrice(lineTotal)}</p>
                     <button
                       onClick={() => {
@@ -157,9 +162,15 @@ export function CartPage() {
                 <dd className="font-display text-2xl font-bold text-pine-900">{formatPrice(total)}</dd>
               </div>
             </dl>
+            {hasOverStock && (
+              <p role="alert" className="mt-5 rounded-lg bg-rust/10 px-3.5 py-2.5 text-[13px] font-semibold text-rust">
+                {t("stock_fix_cart")}
+              </p>
+            )}
             <button
               onClick={() => navigate("/buyurtma")}
-              className="group mt-6 flex w-full items-center justify-center gap-2.5 rounded-full bg-honey-400 py-4 font-bold text-pine-950 shadow-card transition hover:bg-honey-300 active:scale-[0.98]"
+              disabled={hasOverStock || loading}
+              className="group mt-6 flex w-full items-center justify-center gap-2.5 rounded-full bg-honey-400 py-4 font-bold text-pine-950 shadow-card transition hover:bg-honey-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {t("checkout")}
               <IconArrow width={18} height={18} className="transition-transform group-hover:translate-x-1" />
