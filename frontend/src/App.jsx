@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter, Link, Route, Routes, useLocation } from "react-router-dom";
 import { I18nProvider, useI18n } from "./lib/i18n";
 import { CartProvider } from "./store/cart";
+import { CatalogProvider } from "./store/catalog";
 import { ToastProvider } from "./components/ui";
 import { Footer, Header } from "./components/layout";
 import { HomePage } from "./pages/Home";
@@ -66,12 +67,14 @@ export default function App() {
   return (
     <I18nProvider>
       <ToastProvider>
-        <CartProvider>
-          <BrowserRouter>
-            <ScrollToTop />
-            <Shell />
-          </BrowserRouter>
-        </CartProvider>
+        <CatalogProvider>
+          <CartProvider>
+            <BrowserRouter>
+              <ScrollToTop />
+              <Shell />
+            </BrowserRouter>
+          </CartProvider>
+        </CatalogProvider>
       </ToastProvider>
     </I18nProvider>
   );

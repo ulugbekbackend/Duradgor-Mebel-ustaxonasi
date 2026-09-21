@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { IMG } from "../data/images";
-import { discountOf, formatPrice, getCategory } from "../data/catalog";
+import { discountOf, formatPrice } from "../data/catalog";
 import { useI18n } from "../lib/i18n";
 import { useCart } from "../store/cart";
+import { useCatalog } from "../store/catalog";
 import { useToast, Reveal } from "./ui";
 import { IconCart, IconCheck } from "./icons";
 
@@ -14,6 +15,7 @@ export function ProductCard({ product, index = 0 }) {
   const [added, setAdded] = useState(false);
   const timer = useRef(undefined);
 
+  const { getCategory } = useCatalog();
   const cat = getCategory(product.category);
   const sale = discountOf(product);
 
