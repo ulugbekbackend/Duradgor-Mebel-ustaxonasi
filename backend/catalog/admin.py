@@ -20,12 +20,14 @@ class ProductImageInline(admin.TabularInline):
 class ProductVariantInline(admin.TabularInline):
     model = ProductVariant
     extra = 1
+    fields = ["name", "name_ru", "color_code", "price_delta"]
 
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "parent", "products_count"]
-    search_fields = ["name", "slug"]
+    list_display = ["name", "name_ru", "slug", "parent", "products_count"]
+    search_fields = ["name", "name_ru", "slug"]
+    fields = ["name", "name_ru", "slug", "parent", "image"]
     list_filter = ["parent"]
     prepopulated_fields = {"slug": ("name",)}
 
@@ -41,15 +43,16 @@ class ProductAdmin(admin.ModelAdmin):
         "is_featured", "is_new", "created_at",
     ]
     list_filter = ["category", "status", "material", "is_featured", "is_new"]
-    search_fields = ["name", "slug", "description"]
+    search_fields = ["name", "name_ru", "slug", "description"]
     prepopulated_fields = {"slug": ("name",)}
     list_editable = ["price", "stock", "status", "is_featured", "is_new"]
     inlines = [ProductImageInline, ProductVariantInline]
     date_hierarchy = "created_at"
     fieldsets = (
         (None, {"fields": ("category", "name", "slug", "description", "cover")}),
+        ("Ruscha", {"fields": ("name_ru", "description_ru")}),
         ("Narx va stok", {"fields": ("price", "old_price", "stock", "status", "popularity")}),
-        ("Xususiyatlar", {"fields": ("material", "width", "depth", "height")}),
+        ("Xususiyatlar", {"fields": ("material", "material_label", "material_label_ru", "width", "depth", "height")}),
         ("Belgilar", {"fields": ("is_featured", "is_new")}),
     )
 

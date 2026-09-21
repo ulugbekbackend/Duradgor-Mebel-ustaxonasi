@@ -10,6 +10,7 @@ from pathlib import Path
 from django.core.management.base import BaseCommand
 from django.core.management.color import no_style
 from django.db import connection, transaction
+from django.utils.dateparse import parse_datetime
 
 from catalog.models import Category, Product, ProductVariant
 
@@ -31,6 +32,7 @@ class Command(BaseCommand):
                 defaults={
                     "slug": item["slug"],
                     "name": item["name"],
+                    "name_ru": item["name_ru"],
                     "parent": categories.get(item["parent"]),
                 },
             )
@@ -38,7 +40,10 @@ class Command(BaseCommand):
         for item in data["products"]:
             variants = item.pop("variants")
             item["category"] = categories[item.pop("category")]
+            created_at = item.pop("created_at")
             product, _ = Product.objects.update_or_create(pk=item.pop("id"), defaults=item)
+            # auto_now_add qo'lda berilgan sanani e'tiborsiz qoldiradi — "yangi" tartibi demo bilan bir xil bo'lsin
+            Product.objects.filter(pk=product.pk).update(created_at=parse_datetime(f"{created_at}T12:00:00+05:00"))
             for variant in variants:
                 ProductVariant.objects.update_or_create(
                     pk=variant.pop("id"), defaults={**variant, "product": product}

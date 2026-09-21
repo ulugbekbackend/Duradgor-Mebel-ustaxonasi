@@ -63,6 +63,19 @@ class CatalogApiTests(APITestCase):
         living = next(c for c in response.data if c["slug"] == "living")
         self.assertIn("sofas", living["children"])
 
+    def test_list_contains_translations_and_variants(self):
+        from .models import ProductVariant
+
+        self.sofa.name_ru = "Диван «Осака»"
+        self.sofa.material_label = "Buk, zig'ir"
+        self.sofa.save()
+        ProductVariant.objects.create(product=self.sofa, name="Yashil", name_ru="Зелёный", color_code="#6f7d5c")
+        response = self.client.get(reverse("product-list"), {"q": "osaka"})
+        item = response.data["results"][0]
+        self.assertEqual(item["name_ru"], "Диван «Осака»")
+        self.assertEqual(item["material_label"], "Buk, zig'ir")
+        self.assertEqual(item["variants"][0]["name_ru"], "Зелёный")
+
     def test_unknown_category_returns_empty_list(self):
         response = self.client.get(reverse("product-list"), {"category": "yoq"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -89,5 +102,9 @@ class SeedDemoTests(APITestCase):
         call_command("seed_demo", stdout=StringIO())  # ikkinchi marta — dublikat bo'lmasligi kerak
         count = Product.objects.count()
         self.assertGreater(count, 0)
+        osaka = Product.objects.get(slug="osaka-divani")
+        self.assertTrue(osaka.name_ru and osaka.description_ru and osaka.material_label_ru)
+        self.assertTrue(Category.objects.get(slug="sofas").name_ru)
+        self.assertEqual(osaka.created_at.date().isoformat(), "2026-01-18")  # demo sanasi saqlanadi
         category = Category.objects.create(name="Yangi", slug="yangi")  # id to'qnashmasligi kerak
         self.assertGreater(category.pk, 12)

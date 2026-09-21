@@ -21,10 +21,13 @@ STATUS_CHOICES = [
 ]
 
 
-class Category(models.Model):
+class Category(WebPMixin, models.Model):
     """Ota-bola (parent-child) tuzilishidagi kategoriya: Mehmonxona -> Divanlar."""
 
+    webp_fields = ("image",)
+
     name = models.CharField("Nomi", max_length=120)
+    name_ru = models.CharField("Nomi (ru)", max_length=120, blank=True)
     slug = models.SlugField("Slug", max_length=140, unique=True)
     parent = models.ForeignKey(
         "self",
@@ -34,6 +37,7 @@ class Category(models.Model):
         on_delete=models.CASCADE,
         related_name="children",
     )
+    image = models.ImageField("Rasm", upload_to="categories/", blank=True, null=True)
 
     class Meta:
         verbose_name = "Kategoriya"
@@ -42,6 +46,10 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        self.convert_images_to_webp()
+        super().save(*args, **kwargs)
 
     def get_descendant_slugs(self) -> list[str]:
         """O'zi + barcha avlodlarining slug'lari (filtrlash uchun).
@@ -67,12 +75,18 @@ class Product(WebPMixin, models.Model):
         Category, verbose_name="Kategoriya", on_delete=models.PROTECT, related_name="products"
     )
     name = models.CharField("Nomi", max_length=200)
+    name_ru = models.CharField("Nomi (ru)", max_length=200, blank=True)
     slug = models.SlugField("Slug", max_length=220, unique=True)
     description = models.TextField("Tavsif")
+    description_ru = models.TextField("Tavsif (ru)", blank=True)
     price = models.DecimalField("Narx", max_digits=12, decimal_places=2)
     old_price = models.DecimalField("Eski narx", max_digits=12, decimal_places=2, null=True, blank=True)
     cover = models.ImageField("Asosiy rasm", upload_to="products/covers/", blank=True, null=True)
     material = models.CharField("Material", max_length=30, choices=MATERIAL_CHOICES)
+    material_label = models.CharField(
+        "Material izohi", max_length=200, blank=True, help_text="Masalan: Buk yog'ochi, zig'ir mato"
+    )
+    material_label_ru = models.CharField("Material izohi (ru)", max_length=200, blank=True)
     width = models.PositiveSmallIntegerField("Eni (sm)")
     depth = models.PositiveSmallIntegerField("Chuqurligi (sm)")
     height = models.PositiveSmallIntegerField("Balandligi (sm)")
@@ -133,12 +147,14 @@ class ProductVariant(models.Model):
         Product, verbose_name="Mahsulot", on_delete=models.CASCADE, related_name="variants"
     )
     name = models.CharField("Nomi", max_length=80)
+    name_ru = models.CharField("Nomi (ru)", max_length=80, blank=True)
     color_code = models.CharField("Rang kodi (HEX)", max_length=7, default="#000000")
     price_delta = models.DecimalField("Narx farqi", max_digits=12, decimal_places=2, default=0)
 
     class Meta:
         verbose_name = "Variant"
         verbose_name_plural = "Variantlar"
+        ordering = ["id"]
 
     def __str__(self):
         return f"{self.product.name} — {self.name}"

@@ -10,7 +10,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ["id", "name", "slug", "parent", "children", "products_count"]
+        fields = ["id", "name", "name_ru", "slug", "parent", "children", "image", "products_count"]
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -22,19 +22,21 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductVariantSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVariant
-        fields = ["id", "name", "color_code", "price_delta"]
+        fields = ["id", "name", "name_ru", "color_code", "price_delta"]
 
 
 class ProductListSerializer(serializers.ModelSerializer):
-    """Ro'yxat uchun yengil serializer."""
+    """Ro'yxat uchun serializer (kartochka: rang nuqtalari uchun variantlar ham)."""
 
     category = serializers.SlugRelatedField(slug_field="slug", read_only=True)
+    variants = ProductVariantSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
         fields = [
-            "id", "slug", "name", "category", "price", "old_price", "cover",
-            "material", "stock", "status", "is_featured", "is_new", "popularity", "created_at",
+            "id", "slug", "name", "name_ru", "category", "price", "old_price", "cover",
+            "material", "material_label", "material_label_ru", "variants",
+            "stock", "status", "is_featured", "is_new", "popularity", "created_at",
         ]
 
 
@@ -49,8 +51,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            "id", "slug", "name", "description", "category", "price", "old_price",
-            "cover", "images", "variants", "material", "dimensions",
+            "id", "slug", "name", "name_ru", "description", "description_ru", "category",
+            "price", "old_price", "cover", "images", "variants",
+            "material", "material_label", "material_label_ru", "dimensions",
             "stock", "status", "is_featured", "is_new", "popularity",
             "created_at", "updated_at",
         ]
