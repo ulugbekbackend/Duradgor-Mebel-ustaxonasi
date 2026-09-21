@@ -1,0 +1,360 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "slug": "living",
+      "name": "Mehmonxona",
+      "parent": null
+    },
+    {
+      "id": 2,
+      "slug": "sofas",
+      "name": "Divanlar",
+      "parent": "living"
+    },
+    {
+      "id": 3,
+      "slug": "armchairs",
+      "name": "Fotellar",
+      "parent": "living"
+    },
+    {
+      "id": 4,
+      "slug": "coffee-tables",
+      "name": "Jurnal stollari",
+      "parent": "living"
+    },
+    {
+      "id": 5,
+      "slug": "kitchen",
+      "name": "Oshxona",
+      "parent": null
+    },
+    {
+      "id": 6,
+      "slug": "kitchen-sets",
+      "name": "Oshxona garniturlari",
+      "parent": "kitchen"
+    },
+    {
+      "id": 7,
+      "slug": "dining",
+      "name": "Ovqatlanish stollari",
+      "parent": "kitchen"
+    },
+    {
+      "id": 8,
+      "slug": "bedroom",
+      "name": "Yotoqxona",
+      "parent": null
+    },
+    {
+      "id": 9,
+      "slug": "beds",
+      "name": "Karavotlar",
+      "parent": "bedroom"
+    },
+    {
+      "id": 10,
+      "slug": "wardrobes",
+      "name": "Garderoblar",
+      "parent": "bedroom"
+    },
+    {
+      "id": 11,
+      "slug": "office",
+      "name": "Ofis",
+      "parent": null
+    },
+    {
+      "id": 12,
+      "slug": "desks",
+      "name": "Ish stollari",
+      "parent": "office"
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "slug": "osaka-divani",
+      "name": "«Osaka» divani",
+      "description": "Uch kishilik «Osaka» divani buk yog'ochidan ishlangan mustahkam karkas va zig'ir matoga ega. O'tirish qismi yuqori zichlikdagi porolondan — yillar davomida shaklini yo'qotmaydi. Qoplamasi yechilib, kimyoviy tozalashga berish mumkin.",
+      "category": "sofas",
+      "price": 6900000,
+      "old_price": 7800000,
+      "material": "beech",
+      "width": 220,
+      "depth": 95,
+      "height": 85,
+      "stock": 4,
+      "status": "in_stock",
+      "popularity": 92,
+      "is_featured": true,
+      "is_new": true,
+      "variants": [
+        {
+          "id": 1,
+          "name": "Yashil",
+          "color_code": "#6f7d5c",
+          "price_delta": 0
+        },
+        {
+          "id": 2,
+          "name": "Kulrang",
+          "color_code": "#9a9a92",
+          "price_delta": 0
+        },
+        {
+          "id": 3,
+          "name": "Qumrang",
+          "color_code": "#cbb591",
+          "price_delta": 0
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "slug": "bergen-burchak-divani",
+      "name": "«Bergen» burchak divani",
+      "description": "Keng oilalar uchun mo'ljallangan «Bergen» burchak divani bukle matoda tikiladi. Chap yoki o'ng burchak variantida buyurtma qilish mumkin. Ichki qismi — quritilgan qarag'ay karkas va mustaqil prujinali blok.",
+      "category": "sofas",
+      "price": 9400000,
+      "old_price": null,
+      "material": "boucle",
+      "width": 280,
+      "depth": 160,
+      "height": 82,
+      "stock": 0,
+      "status": "on_order",
+      "popularity": 88,
+      "is_featured": true,
+      "is_new": false,
+      "variants": [
+        {
+          "id": 4,
+          "name": "Krem",
+          "color_code": "#d8cbb2",
+          "price_delta": 0
+        },
+        {
+          "id": 5,
+          "name": "Surp",
+          "color_code": "#5d5b56",
+          "price_delta": 0
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "slug": "aura-foteli",
+      "name": "«Aura» foteli",
+      "description": "O'rta asr uslubidagi «Aura» foteli eman yog'ochidan egilgan karkasga ega. Yumshoq bukle yostig'i tanani to'liq qamrab oladi. Kitab o'qish burchagi uchun eng sevimli tanlov.",
+      "category": "armchairs",
+      "price": 3200000,
+      "old_price": null,
+      "material": "oak",
+      "width": 78,
+      "depth": 80,
+      "height": 96,
+      "stock": 7,
+      "status": "in_stock",
+      "popularity": 74,
+      "is_featured": false,
+      "is_new": true,
+      "variants": [
+        {
+          "id": 6,
+          "name": "Sut rang",
+          "color_code": "#e6ddc9",
+          "price_delta": 0
+        },
+        {
+          "id": 7,
+          "name": "Asal",
+          "color_code": "#c99b57",
+          "price_delta": 0
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "slug": "loft-jurnal-stoli",
+      "name": "«Loft» jurnal stoli",
+      "description": "Yong'oq yog'ochidan yo'nib ishlangan oyoqlar va pastki tokcha — «Loft» stoli mehmonxonaning markaziga aylanadi. Sirt tabiiy moy bilan ishlangan, suv va issiqqa chidamli.",
+      "category": "coffee-tables",
+      "price": 1450000,
+      "old_price": 1700000,
+      "material": "walnut",
+      "width": 90,
+      "depth": 90,
+      "height": 42,
+      "stock": 12,
+      "status": "in_stock",
+      "popularity": 65,
+      "is_featured": false,
+      "is_new": false,
+      "variants": [
+        {
+          "id": 16,
+          "name": "Yong'oq",
+          "color_code": "#5c4327",
+          "price_delta": 0
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "slug": "provans-oshxona-garnituri",
+      "name": "«Provans» oshxona garnituri",
+      "description": "«Provans» garnituri sizning oshxonangiz o'lchamiga moslab yasaydi: MDF fasadlar, eman ish yuzasi va mess tutqichlar. Loyiha 3D chizma asosida, o'rnatish narxga kiritilgan.",
+      "category": "kitchen-sets",
+      "price": 18500000,
+      "old_price": null,
+      "material": "mdf",
+      "width": 300,
+      "depth": 60,
+      "height": 240,
+      "stock": 0,
+      "status": "on_order",
+      "popularity": 81,
+      "is_featured": true,
+      "is_new": false,
+      "variants": [
+        {
+          "id": 8,
+          "name": "Yashil",
+          "color_code": "#7d8a6f",
+          "price_delta": 0
+        },
+        {
+          "id": 9,
+          "name": "Oq",
+          "color_code": "#ece7db",
+          "price_delta": 0
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "slug": "oilaviy-ovqatlanish-stoli",
+      "name": "«Oilaviy» stoli + 6 stul",
+      "description": "To'liq eman massividan ishlangan to'plam: 180 sm stol va ratan o'rindiqqli 6 ta stul. Dasturxon atrofida uch avlod sig'adi — bu bizning eng ko'p so'raladigan to'plamimiz.",
+      "category": "dining",
+      "price": 5600000,
+      "old_price": 6200000,
+      "material": "oak",
+      "width": 180,
+      "depth": 90,
+      "height": 76,
+      "stock": 3,
+      "status": "in_stock",
+      "popularity": 90,
+      "is_featured": true,
+      "is_new": false,
+      "variants": [
+        {
+          "id": 10,
+          "name": "Tabiiy eman",
+          "color_code": "#b98d55",
+          "price_delta": 0
+        },
+        {
+          "id": 11,
+          "name": "Qoraytirilgan",
+          "color_code": "#6e4f30",
+          "price_delta": 0
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "slug": "orzu-karavoti",
+      "name": "«Orzu» karavoti 160×200",
+      "description": "Kanalli bosh suyanchiq va o'tirish joyiga ega «Orzu» karavoti yotoqxonaga mehmonxona hashamini beradi. Ko'tarish mexanizmi ostida — keng kir yuvish qutisi. Matras to'plamga kirmaydi.",
+      "category": "beds",
+      "price": 7200000,
+      "old_price": null,
+      "material": "velour",
+      "width": 175,
+      "depth": 215,
+      "height": 118,
+      "stock": 5,
+      "status": "in_stock",
+      "popularity": 86,
+      "is_featured": true,
+      "is_new": true,
+      "variants": [
+        {
+          "id": 12,
+          "name": "Suli",
+          "color_code": "#d7c9ad",
+          "price_delta": 0
+        },
+        {
+          "id": 13,
+          "name": "Zaytun",
+          "color_code": "#8a8a6d",
+          "price_delta": 0
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "slug": "atlas-garderobi",
+      "name": "«Atlas» garderobi",
+      "description": "To'rt eshikli «Atlas» garderobi yong'oq shpon bilan qoplangan. Ichida — ikki qavatli rels, tortmalar va oyna bo'limi. Eshiklar sekin yopiladigan mexanizm bilan jihozlangan.",
+      "category": "wardrobes",
+      "price": 8900000,
+      "old_price": null,
+      "material": "walnut",
+      "width": 200,
+      "depth": 60,
+      "height": 220,
+      "stock": 2,
+      "status": "in_stock",
+      "popularity": 58,
+      "is_featured": false,
+      "is_new": false,
+      "variants": [
+        {
+          "id": 17,
+          "name": "Yong'oq",
+          "color_code": "#5c4327",
+          "price_delta": 0
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "slug": "sokrat-ish-stoli",
+      "name": "«Sokrat» ish stoli",
+      "description": "Uy ofisi uchun ixcham «Sokrat» stoli: yong'oq ish yuzasi, qora metall oyoqlar va yon tortma bloki. Kabel kanali orqali stol ustida hech qanday sim ko'rinmaydi.",
+      "category": "desks",
+      "price": 2750000,
+      "old_price": null,
+      "material": "walnut",
+      "width": 120,
+      "depth": 60,
+      "height": 75,
+      "stock": 9,
+      "status": "in_stock",
+      "popularity": 70,
+      "is_featured": false,
+      "is_new": true,
+      "variants": [
+        {
+          "id": 14,
+          "name": "Yong'oq",
+          "color_code": "#5c4327",
+          "price_delta": 0
+        },
+        {
+          "id": 15,
+          "name": "Eman",
+          "color_code": "#b98d55",
+          "price_delta": 0
+        }
+      ]
+    }
+  ]
+}

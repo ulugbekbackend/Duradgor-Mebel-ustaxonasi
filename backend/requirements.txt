@@ -1,0 +1,12 @@
+# Versiyalar o'rnatilgandan keyin `pip freeze` bilan pin qilingan (Django 5.2 — LTS)
+Django==5.2.17
+djangorestframework==3.18.1
+drf-spectacular==0.30.0
+django-cors-headers==4.9.0
+python-decouple==3.8
+psycopg[binary]==3.3.6
+Pillow==12.3.0
+gunicorn==26.2.0
+requests==2.34.2
+pytest==9.1.1
+pytest-django==4.14.0
