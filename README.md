@@ -12,7 +12,8 @@ Mebel ustasi uchun onlayn katalog + savat + buyurtma tizimi.
 │   ├── config/          # settings, urls, wsgi/asgi
 │   ├── catalog/         # Category, Product, ProductImage, ProductVariant + `seed_demo` buyrug'i
 │   ├── orders/          # Order, OrderItem, Customer + Telegram bildirishnoma
-│   ├── core/            # mixins (media tozalash), utils (Telegram, WebP), pagination, /api/health/
+│   ├── contact/         # ContactMessage — aloqa formasi murojaatlari + Telegram
+│   ├── core/            # mixins (media tozalash), utils (Telegram, WebP), validators, pagination, /api/health/
 │   ├── requirements.txt # pin qilingan versiyalar
 │   └── Dockerfile
 ├── frontend/            # React 19 frontend (Vite + Tailwind, uz/ru)
@@ -75,21 +76,28 @@ VITE_API_URL=http://localhost:8000/api
 Qiymat `/api` bilan birga yoziladi (docker'da `/api`). Bu ko'rsatkich bo'lmasa frontend
 demo-rejimda (lokaldagi katalog ma'lumotlari bilan) ishlaydi — backend'siz ham ko'rsatish mumkin.
 
-> Frontend matn, rasm va tarjimalarni `frontend/src/data/catalog.js` dan oladi; API'dan
-> narx, stok va holat keladi. Shuning uchun demo katalog `seed_demo` bilan yuklanadi —
-> id'lar (mahsulot va rang variantlari) ikkala tomonda bir xil.
+> API ulanganda **barcha ma'lumot backenddan** olinadi: kategoriyalar, bosh sahifa vitrinasi, katalog,
+> mahsulot sahifasi, savat narxlari (rang narx farqi bilan) va aloqa formasi. Admin'da qo'shilgan
+> mahsulot va kategoriyalar saytda darhol chiqadi. Savat faqat `{mahsulot, rang, soni}` saqlaydi —
+> narx har safar backenddan olinadi, shuning uchun savatdagi summa buyurtmadagi bilan bir xil;
+> backendda o'chirilgan mahsulot savatdan avtomatik olib tashlanadi.
+>
+> `frontend/src/data/catalog.js` faqat **demo-rejim** (API'siz) uchun. `seed_demo` shu ma'lumotni
+> (uz/ru matnlar, rang variantlari) backendga yuklaydi.
 
 ## 🔌 API
 
 | Metod | Yo'l | Vazifasi |
 |---|---|---|
-| GET | `/api/catalog/categories/` | Kategoriyalar (ota-bola, mahsulotlar soni bilan) |
-| GET | `/api/catalog/products/` | Mahsulotlar: `category`, `q`, `material`, `price_min`, `price_max`, `status`, `ordering`, `page`, `page_size` |
-| GET | `/api/catalog/products/{slug}/` | Mahsulot tafsiloti (rasmlar, rang variantlari) |
+| GET | `/api/catalog/categories/` | Kategoriyalar (ota-bola, uz/ru nom, rasm, mahsulotlar soni) |
+| GET | `/api/catalog/products/` | Mahsulotlar: `category`, `q`, `material`, `price_min`, `price_max`, `status`, `is_featured`, `is_new`, `ids`, `ordering`, `page`, `page_size` |
+| GET | `/api/catalog/products/{slug}/` | Mahsulot tafsiloti (uz/ru matn, rasmlar, rang variantlari) |
 | POST | `/api/orders/` | Buyurtma yaratish (`full_name`, `phone`, `address`, `comment`, `payment_method`, `items: [{product, variant, quantity}]`) |
+| POST | `/api/contact/` | Aloqa formasi (`name`, `phone`, `message`) |
 | GET | `/api/health/` | Healthcheck |
 
-Buyurtmalarni o'qish ochiq API'da yo'q — ular faqat admin panelda. To'liq sxema: `/api/docs/` (Swagger).
+Buyurtma va murojaatlarni o'qish ochiq API'da yo'q — ular faqat admin panelda. To'liq sxema: `/api/docs/` (Swagger).
+Ruscha matnlar (`name_ru`, `description_ru`, `material_label_ru`) bo'sh bo'lsa sayt o'zbekchasini ko'rsatadi.
 
 ## 🧪 3) Testlar
 
@@ -101,8 +109,9 @@ pytest
 
 Qamrab olingan:
 - `core/tests.py` — **media tozalash signallari**: `post_delete` (obyekt o'chsa fayl ham o'chadi) va `pre_save` (yangi rasm yuklansa eski fayl diskdan yo'qoladi);
-- `orders/tests.py` — buyurtma yaratish, jami summa, stok kamayishi (bir mahsulot bir necha qatorda ham), rang varianti narxi, telefon normallashtirish, qayta mijoz, buyurtmalar ochiq API'da o'qilmasligi, Telegram faqat commit'dan keyin;
-- `catalog/tests.py` — qidiruv, kategoriya (ota-bola) filtri, narx oralig'i, saralash, noto'g'ri filtrlar (400), `seed_demo`.
+- `orders/tests.py` — buyurtma yaratish, jami summa, stok kamayishi (bir mahsulot bir necha qatorda ham), rang varianti narxi, telefon formatlari va normallashtirish, qayta mijoz, buyurtmalar ochiq API'da o'qilmasligi, Telegram faqat commit'dan keyin;
+- `catalog/tests.py` — qidiruv, kategoriya (ota-bola) filtri, narx oralig'i, saralash, `is_featured`/`is_new`/`ids`, uz/ru maydonlar, noto'g'ri filtrlar (400), `seed_demo`;
+- `contact/tests.py` — murojaat saqlanishi, validatsiya, throttle, Telegram faqat commit'dan keyin, Telegram matnida foydalanuvchi HTML'i ekranlanishi.
 
 ## 🗑 Media fayllarni avtomatik tozalash (muhim mexanizm)
 
@@ -119,8 +128,10 @@ Har bir modelda qayta yozilmaydi.
 
 1. `@BotFather` → `/newbot` → token oling → `backend/.env`: `TELEGRAM_BOT_TOKEN=...`
 2. Botga yozing, so'ng `https://api.telegram.org/bot<TOKEN>/getUpdates` dan `chat.id` ni oling → `TELEGRAM_CHAT_ID=...`
-3. Yangi buyurtma kelganda ustaga mahsulotlar (rangi bilan), mijoz va jami summa bilan xabar boradi.
+3. Yangi buyurtma kelganda ustaga mahsulotlar (rangi bilan), mijoz va jami summa bilan xabar boradi;
+   aloqa formasidan murojaat kelganda — ism, telefon va xabar. Murojaatlar admin panelda ham saqlanadi.
    Xabar tranzaksiya yakunlangach fon oqimida yuboriladi — Telegram sekin bo'lsa ham mijoz kutmaydi.
+   Mijoz yozgan matn HTML'dan ekranlanadi (`<`, `&` kabi belgilar xabarni buzmaydi).
 
 ## 💳 To'lovlar (Payme/Click) arxitekturasi
 
@@ -138,7 +149,7 @@ model o'zgarmaydi.
 - `backend/.env`: `DEBUG=False`, `ALLOWED_HOSTS=example.com`, `SECURE_SSL_REDIRECT=True`, maxfiy `SECRET_KEY` (bo'lmasa ilova ishga tushmaydi).
 - HTTPS: `deploy/nginx.https.conf` (certbot sertifikatlari bilan) — `docker-compose.yml` dagi nginx volume'ini shu faylga almashtiring, `443` portini oching va sertifikat papkalarini ulang (`/etc/letsencrypt`, `/var/www/certbot`). HTTPS'siz `SECURE_SSL_REDIRECT=False` qoldiring.
 - CORS faqat kerakli domenlarga ochiq (`CORS_ALLOWED_ORIGINS`).
-- DRF throttling: buyurtma uchun `10/soat` (`orders` scope), mehmonlar uchun `1000/soat`. Nginx ortida `NUM_PROXIES=1` (compose beradi).
+- DRF throttling: buyurtma uchun `10/soat` (`orders`), aloqa formasi uchun `5/soat` (`contact`), mehmonlar uchun `1000/soat`. Nginx ortida `NUM_PROXIES=1` (compose beradi).
 - Backend konteyneri root'siz ishlaydi, `HEALTHCHECK` → `/api/health/`; nginx backend sog'lom bo'lgach ishga tushadi.
 - `deploy/nginx.conf` statik/media fayllarni volume'lardan tarqatadi; Traefik label'lari `docker-compose.yml` da izohda tayyor.
 - Backup: `./scripts/backup_db.sh` (14 kun saqlanadi, cron'ga qo'shing).
@@ -152,8 +163,7 @@ Frontendda sahifa darajasidagi title/description/OG teglari (uz/ru), toza URL'la
 
 - **Andoza ma'lumotlar:** telefon (`+998 XX XXX XX XX`), Telegram, Facebook, Instagram havolalari va domen
   (`example.com`). Kontaktlar bitta joyda — `frontend/src/components/layout.jsx` konstantalari.
-- **Rasmlar:** mahsulot rasmlari va `og:image` tashqi vaqtinchalik havolalarda (`frontend/src/data/images.js`).
-  Production'dan oldin haqiqiy suratlarni `public/` yoki media'ga joylang.
-- **Aloqa formasi** hozircha hech qayerga yubormaydi — faqat "yuborildi" xabarini ko'rsatadi.
-- **Admin'da qo'shilgan yangi mahsulotlar** katalog ro'yxatida chiqadi, lekin mahsulot sahifasi va savat
-  hozircha faqat `frontend/src/data/catalog.js` dagi mahsulotlar bilan ishlaydi.
+- **Rasmlar:** admin'da mahsulot/kategoriyaga rasm yuklanmagan bo'lsa sayt demo suratlarni ko'rsatadi —
+  ular va `og:image` tashqi vaqtinchalik havolalarda (`frontend/src/data/images.js`).
+  Production'dan oldin haqiqiy suratlarni admin panel orqali yuklang.
+- **To'lov:** Payme/Click hali ulanmagan, lekin checkout'da "online" to'lov varianti ko'rinadi.
