@@ -76,6 +76,17 @@ class CatalogApiTests(APITestCase):
         self.assertEqual(item["material_label"], "Buk, zig'ir")
         self.assertEqual(item["variants"][0]["name_ru"], "Зелёный")
 
+    def test_featured_new_and_ids_filters(self):
+        Product.objects.filter(pk=self.sofa.pk).update(is_featured=True)
+        Product.objects.filter(pk=self.bed.pk).update(is_new=True)
+        url = reverse("product-list")
+        self.assertEqual([r["slug"] for r in self.client.get(url, {"is_featured": "true"}).data["results"]], ["osaka-divani"])
+        self.assertEqual([r["slug"] for r in self.client.get(url, {"is_new": "true"}).data["results"]], ["orzu-karavoti"])
+        both = self.client.get(url, {"ids": f"{self.sofa.pk},{self.bed.pk}"}).data
+        self.assertEqual(both["count"], 2)
+        self.assertEqual(self.client.get(url, {"ids": "1,abc"}).status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.client.get(url, {"is_new": "ha"}).status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_unknown_category_returns_empty_list(self):
         response = self.client.get(reverse("product-list"), {"category": "yoq"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)

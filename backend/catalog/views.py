@@ -45,6 +45,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
       ?material=oak,walnut   — material bo'yicha
       ?price_min=1000000&price_max=9000000
       ?status=in_stock | on_order
+      ?is_featured=true      — tavsiya etilganlar; ?is_new=true — yangilar
+      ?ids=1,5,7             — aniq mahsulotlar (savat uchun)
     Saralash: ?ordering=price | -price | -created_at | -popularity
     """
 
@@ -67,6 +69,9 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             OpenApiParameter("price_min", Decimal, description="Minimal narx"),
             OpenApiParameter("price_max", Decimal, description="Maksimal narx"),
             OpenApiParameter("status", str, description="in_stock yoki on_order"),
+            OpenApiParameter("is_featured", bool, description="Faqat tavsiya etilganlar"),
+            OpenApiParameter("is_new", bool, description="Faqat yangilar"),
+            OpenApiParameter("ids", str, description="Mahsulot id'lari (vergul bilan), masalan savat uchun"),
         ]
     )
     def list(self, request, *args, **kwargs):
@@ -104,5 +109,19 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             if status not in {key for key, _ in STATUS_CHOICES}:
                 raise serializers.ValidationError({"status": "in_stock yoki on_order bo'lishi kerak."})
             qs = qs.filter(status=status)
+
+        for flag in ("is_featured", "is_new"):
+            value = params.get(flag)
+            if value is not None:
+                if value.lower() not in ("true", "false", "1", "0"):
+                    raise serializers.ValidationError({flag: "true yoki false bo'lishi kerak."})
+                qs = qs.filter(**{flag: value.lower() in ("true", "1")})
+
+        ids = params.get("ids")
+        if ids:
+            try:
+                qs = qs.filter(pk__in=[int(i) for i in ids.split(",") if i.strip()])
+            except ValueError:
+                raise serializers.ValidationError({"ids": "Vergul bilan ajratilgan butun sonlar bo'lishi kerak."}) from None
 
         return qs
